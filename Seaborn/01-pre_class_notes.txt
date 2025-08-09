@@ -1,0 +1,57 @@
+🔍 What is EDA?
+EDA (Exploratory Data Analysis) means exploring data using graphs, stats, and summaries to find patterns, errors, or relationships before modeling.
+
+📊 Libraries Used
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+matplotlib – for basic plots
+seaborn – for advanced, better-looking plots
+🎯 Goals of EDA
+Understand structure & distribution of data
+Detect missing values & outliers
+Discover relationships between variables
+Guide data cleaning and feature engineering
+🔥 Key Seaborn Plots
+Plot Type	Function	Use Case
+Histogram	sns.histplot()	Data distribution
+Box Plot	sns.boxplot()	Detect outliers, compare distributions
+Violin Plot	sns.violinplot()	Box + density plot
+Scatter Plot	sns.scatterplot()	Relationship between 2 numeric variables
+Pair Plot	sns.pairplot()	Relationship across multiple variables
+Heatmap	sns.heatmap()	Correlation between variables
+Count Plot	sns.countplot()	Frequency of categorical values
+💡 Useful Examples
+
+sns.boxplot(x='gender', y='salary', data=df)
+plt.title("Salary Distribution by Gender")
+
+
+sns.heatmap(df.corr(), annot=True, cmap='coolwarm')
+
+
+sns.pairplot(df, hue='department')
+
+🧽 Data Cleaning During EDA
+Check missing values
+
+df.isnull().sum()
+
+Check data types
+
+df.dtypes
+
+Detect duplicates
+
+df.duplicated().sum()
+
+Check value counts
+
+df['column'].value_counts()
+
+✅ Key Takeaways
+EDA is the first step before modeling
+Helps clean and understand data
+Use Seaborn for beautiful and rich visualizations
+Always plot distributions, outliers, and correlations

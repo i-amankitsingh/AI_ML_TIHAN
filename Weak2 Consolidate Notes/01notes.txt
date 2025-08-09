@@ -1,0 +1,105 @@
+✅ Python, Data, and Tools Overview
+Python for AI/ML: Easy syntax, huge libraries (e.g., NumPy, Pandas, Scikit-learn)
+App Layers: Frontend – UI | Backend – Logic & APIs | Database – Storage
+Structured Data: Tables (e.g., Excel)
+Unstructured Data: Images, text (e.g., PDF, tweets)
+APIs: Allow systems to talk to each other (backend/frontend or app-to-app)
+Stateless: Server doesn’t remember previous requests – each is independent
+Cloud-Friendly: Python is lightweight, works well with services like AWS, GCP
+📦 NumPy Basics
+Import: import numpy as np
+Create Array: arr = np.array([1, 2, 3])
+Ones: np.ones((2,2)) → 2x2 matrix of 1s
+Range: np.arange(2, 10, 2) → [2, 4, 6, 8]
+Multiply: arr * 3
+Random Array: np.random.rand(3,3)
+Filter: arr[arr > 0.5]
+Reshape: arr.reshape(3,3)
+🐼 Pandas Basics
+Import: import pandas as pd
+
+Series: pd.Series([1, 3, 5])
+
+DataFrame:
+
+python
+ 
+data = {'name': ['A', 'B'], 'age': [22, 24]}
+df = pd.DataFrame(data)
+
+Read CSV: pd.read_csv('file.csv')
+
+.iloc[2]: 3rd row by position
+
+.loc[2]: Row with label/index 2
+
+🧹 Data Handling & Cleaning with Pandas
+Load Data
+python
+ 
+df = pd.read_csv('data.csv')
+df = pd.read_excel('data.xlsx')
+
+View Info
+python
+ 
+df.head(), df.tail(), df.shape, df.columns, df.info()
+
+Clean Data
+python
+ 
+df.isnull().sum()     # Count nulls
+df.dropna()           # Remove null rows
+df.fillna(0)          # Fill with 0
+
+Change Data Types
+python
+ 
+df['col'] = df['col'].astype(int)
+
+Rename / Drop / Sort
+python
+ 
+df.rename(columns={'old':'new'}, inplace=True)
+df.drop('col', axis=1, inplace=True)
+df.sort_values('age')
+
+🔁 Filtering & Reshaping
+Filter: df[df['Age'] > 25]
+Select Columns: df[['name', 'age']]
+Reset Index: df.reset_index(drop=True)
+Convert:
+DataFrame → NumPy: arr = df.values
+
+NumPy → DataFrame:
+
+python
+ 
+df = pd.DataFrame(np.array([[1,2],[3,4]]), columns=['A', 'B'])
+
+📊 EDA (Exploratory Data Analysis)
+Summary: df.describe()
+Value counts: df['column'].value_counts()
+Grouping: df.groupby('dept')['salary'].mean()
+Missing values: df.isnull().sum()
+Filter rows: df[df['salary'] > 50000]
+🧪 Employee Dataset Tasks (Hard Section)
+python
+ 
+# Load
+df = pd.read_csv('employee_data.csv')
+
+# Fill missing salary
+df['salary'].fillna(df['salary'].mean(), inplace=True)
+
+# Convert date
+df['date_joined'] = pd.to_datetime(df['date_joined'])
+
+# Drop duplicates
+df.drop_duplicates(inplace=True)
+
+# Rename column
+df.rename(columns={'date_joined': 'joining_date'}, inplace=True)
+
+# Filter employees joined after Jan 1, 2021
+filtered = df[df['joining_date'] > '2021-01-01'][['employee_id', 'department']]

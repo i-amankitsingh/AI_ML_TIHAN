@@ -1,0 +1,53 @@
+Discussions
+🧠 What is Matplotlib?
+Matplotlib is a Python library used to create charts and graphs. It helps visualize data to find patterns, trends, and insights.
+
+🔧 Basic Structure
+
+import matplotlib.pyplot as plt
+
+x = [1, 2, 3, 4]
+y = [10, 20, 25, 30]
+
+plt.plot(x, y)        # Plot line chart
+plt.show()            # Show the chart
+
+📊 Common Types of Plots
+Plot Type	Function Used	Use Case
+Line Plot	plt.plot()	Trend over time
+Bar Chart	plt.bar()	Compare categories
+Histogram	plt.hist()	Distribution of data
+Scatter Plot	plt.scatter()	Relationship between two variables
+Pie Chart	plt.pie()	Proportions (percentage share)
+🎨 Customization Options
+
+plt.title("My Chart")               # Add title
+plt.xlabel("X-Axis")                # Label X
+plt.ylabel("Y-Axis")                # Label Y
+plt.grid(True)                      # Add grid
+plt.legend(["Sales"])              # Add legend
+plt.xlim(0, 10)                     # X-axis limit
+plt.ylim(0, 100)                    # Y-axis limit
+
+🌈 Styling Your Plot
+
+plt.plot(x, y, color='green', linestyle='--', marker='o')
+
+color: red, blue, green, etc.
+linestyle: '-', '--', ':'
+marker: 'o', '*', 's', etc.
+📌 Subplots (Multiple Charts Together)
+
+plt.subplot(1, 2, 1)  # (rows, cols, chart_number)
+plt.plot(x, y)
+
+plt.subplot(1, 2, 2)
+plt.bar(x, y)
+
+plt.show()
+
+✅ Key Takeaways
+Matplotlib is powerful for data visualization.
+Use plot(), bar(), scatter() etc. for different needs.
+Customize graphs using title, label, legend, and colors.
+Use subplot() to compare multiple graphs.

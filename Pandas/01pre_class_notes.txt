@@ -1,0 +1,71 @@
+Data Handling with NumPy & Pandas
+🔹 1. NumPy vs Pandas – What’s the Difference?
+Feature	NumPy (arrays)	Pandas (DataFrames)
+Structure	Homogeneous array (same type)	Tabular data (rows + columns)
+Use Case	Fast numerical computation	Easy data analysis and manipulation
+Example Use	Math, stats, ML calculations	Loading, filtering, reshaping data
+🔹 2. Loading CSV/Excel Files with Pandas
+📥 Load CSV:
+import pandas as pd
+df = pd.read_csv('data.csv')
+
+📥 Load Excel:
+df = pd.read_excel('data.xlsx')
+
+✅ Common Parameters:
+header: Use if no column headers
+usecols: To load only specific columns
+nrows: To load limited rows for testing
+🔹 3. Viewing and Exploring Data
+df.head()        # First 5 rows
+df.tail()        # Last 5 rows
+df.shape         # (rows, columns)
+df.columns       # List of column names
+df.info()        # Column types, nulls
+df.describe()    # Summary stats
+
+🔹 4. Basic Data Cleaning
+🧹 Handling Null Values
+df.isnull().sum()        # Count nulls
+df.dropna()              # Drop rows with nulls
+df.fillna(0)             # Fill nulls with 0 or other values
+
+🧼 Renaming Columns
+df.rename(columns={'OldName': 'NewName'}, inplace=True)
+
+🧼 Changing Data Types
+df['column'] = df['column'].astype('int')
+
+🔹 5. Reshaping & Filtering Data
+🔁 Selecting Specific Columns
+df[['Name', 'Age']]
+
+🔍 Filtering Rows
+df[df['Age'] > 30]   # Only rows with Age > 30
+
+🔁 Sorting Data
+df.sort_values(by='Age', ascending=False)
+
+🔁 Resetting Index
+df.reset_index(drop=True, inplace=True)
+
+🔹 6. Converting Between DataFrame and NumPy Array
+▶️ Pandas → NumPy
+arr = df.values
+
+◀️ NumPy → Pandas
+import numpy as np
+data = np.array([[1, 2], [3, 4]])
+df = pd.DataFrame(data, columns=['A', 'B'])
+
+🧪 Hands-on Practice Ideas
+Load a sample CSV from Kaggle or GitHub.
+Check for null values and fill or drop them.
+Sort by a numeric column (like Age or Salary).
+Filter rows where a condition is met (e.g., Age > 25).
+Convert a DataFrame to a NumPy array and back.
+✅ Key Takeaways
+NumPy is great for fast calculations; Pandas is best for data analysis.
+Use read_csv() or read_excel() to load datasets.
+Always check for nulls and clean the data before analysis.
+You can reshape, sort, and filter data easily with Pandas.

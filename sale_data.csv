@@ -1,0 +1,66 @@
+Sale_ID,Customer_Name,Region,Category,Product,Quantity,Price_per_Unit,Total_Amount,Sale_Date,Discount,Payment_Mode
+1,Neha Singh,North,Groceries,Wheat,2,1243,2486,2025-01-12,0.03,Credit Card
+2,Parth Patel,West,Electronics,Mobile,1,1891,1891,2024-04-29,0.15,Credit Card
+3,Meera Menon,South,Sports,Gym Equipment,2,3779,7558,2024-10-28,0.08,Credit Card
+4,Pooja Nair,West,Groceries,Milk,2,1863,3726,2025-01-25,0.1,Credit Card
+5,Manoj Bhat,North,Groceries,Milk,5,2266,11330,2024-01-23,0.22,Credit Card
+6,Manoj Bhat,North,Sports,Tennis Racket,5,3062,15310,2024-10-22,0.06,Credit Card
+7,Priya Sharma,South,Groceries,Rice,2,927,1854,2024-07-13,0.08,UPI
+8,Pooja Nair,East,Groceries,Wheat,3,684,2052,2024-11-07,0.19,Debit Card
+9,Pooja Nair,West,Furniture,Sofa,5,1899,9495,2024-12-16,0.1,Credit Card
+10,Ananya Joshi,North,Groceries,Vegetables,3,642,1926,2024-04-18,0.27,UPI
+11,Sandeep Reddy,West,Furniture,Bed,2,2269,4538,2024-03-12,0.07,UPI
+12,Parth Patel,West,Sports,Gym Equipment,3,1896,5688,2024-03-11,0.15,Credit Card
+13,Priya Sharma,North,Clothing,Jeans,4,4985,19940,2024-02-02,0.12,Cash
+14,Aditya Jain,East,Sports,Football,1,4498,4498,2025-01-19,0.08,UPI
+15,Neha Singh,East,Furniture,Chair,4,126,504,2025-01-04,0.26,UPI
+16,Aditya Jain,South,Sports,Football,3,4258,12774,2024-11-07,0.06,UPI
+17,Pooja Nair,North,Sports,Tennis Racket,4,259,1036,2024-02-27,0.28,UPI
+18,Ananya Joshi,North,Clothing,Shirt,1,4081,4081,2024-02-05,0.29,Debit Card
+19,Vikram Desai,West,Sports,Cricket Bat,3,4422,13266,2024-11-06,0.13,Debit Card
+20,Meera Menon,South,Groceries,Vegetables,3,3688,11064,2024-09-21,0.14,Debit Card
+21,Ananya Joshi,North,Groceries,Rice,5,4637,23185,2024-04-27,0.18,Credit Card
+22,Amit Verma,North,Clothing,Shirt,1,2806,2806,2024-02-06,0.15,UPI
+23,Simran Kaur,South,Sports,Cricket Bat,5,4820,24100,2024-08-30,0.07,Cash
+24,Ishita Roy,South,Electronics,Mobile,4,3002,12008,2024-08-04,0.12,Credit Card
+25,Neha Singh,North,Furniture,Sofa,1,2136,2136,2024-04-08,0.06,Cash
+26,Vikram Desai,West,Clothing,Jacket,4,2146,8584,2024-02-08,0.13,Credit Card
+27,Priya Sharma,North,Electronics,Laptop,2,3429,6858,2024-09-05,0.14,Cash
+28,Priya Sharma,South,Furniture,Table,4,2272,9088,2024-08-20,0.09,Cash
+29,Vikram Desai,South,Groceries,Wheat,1,4844,4844,2025-01-11,0.16,UPI
+30,Priya Sharma,North,Sports,Gym Equipment,5,4450,22250,2024-03-21,0.02,Credit Card
+31,Pooja Nair,North,Sports,Football,2,3407,6814,2024-03-02,0.28,Debit Card
+32,Parth Patel,North,Sports,Football,4,4881,19524,2024-10-16,0.16,UPI
+33,Sandeep Reddy,East,Clothing,Jacket,4,1172,4688,2024-12-09,0.19,Cash
+34,Harish Iyer,North,Electronics,Camera,5,4712,23560,2024-02-21,0.02,Debit Card
+35,Aditya Jain,East,Clothing,Jacket,1,2101,2101,2024-07-08,0.09,Cash
+36,Meera Menon,East,Sports,Football,5,2552,12760,2024-12-05,0.03,Debit Card
+37,Kunal Mehta,North,Electronics,Laptop,3,2408,7224,2024-11-05,0.06,UPI
+38,Sandeep Reddy,East,Sports,Gym Equipment,3,516,1548,2024-02-17,0.19,UPI
+39,Priya Sharma,North,Groceries,Wheat,3,1423,4269,2025-01-14,0.13,Cash
+40,Meera Menon,North,Electronics,Mobile,2,4569,9138,2024-01-19,0.25,Debit Card
+41,Ishita Roy,South,Electronics,Headphones,3,426,1278,2024-07-02,0.06,Debit Card
+42,Neha Singh,East,Sports,Gym Equipment,5,1366,6830,2024-05-01,0.26,Debit Card
+43,Ishita Roy,North,Clothing,Jacket,4,2132,8528,2024-05-16,0.05,Credit Card
+44,Manoj Bhat,North,Furniture,Chair,2,3870,7740,2024-06-28,0.09,Debit Card
+45,Ananya Joshi,North,Clothing,Dress,3,2382,7146,2024-02-05,0.29,UPI
+46,Swati Agarwal,West,Sports,Tennis Racket,1,1044,1044,2024-05-13,0.05,UPI
+47,Priya Sharma,North,Sports,Gym Equipment,3,2669,8007,2024-08-11,0.18,Credit Card
+48,Manoj Bhat,South,Groceries,Rice,4,113,452,2024-09-23,0.28,Debit Card
+49,Swati Agarwal,West,Electronics,Headphones,5,2671,13355,2024-12-05,0.25,UPI
+50,Aditya Jain,East,Furniture,Sofa,4,2522,10088,2024-10-10,0.04,Cash
+51,Manoj Bhat,South,Sports,Tennis Racket,4,4588,18352,2024-01-01,0.09,Debit Card
+52,Ishita Roy,East,Furniture,Bed,4,1850,7400,2024-09-18,0.14,Debit Card
+53,Amit Verma,East,Sports,Tennis Racket,1,2024,2024,2024-12-10,0.09,Debit Card
+54,Vikram Desai,North,Electronics,Laptop,4,696,2784,2024-08-21,0.12,Debit Card
+55,Manoj Bhat,West,Furniture,Chair,2,145,290,2025-01-19,0.26,Credit Card
+56,Ishita Roy,South,Clothing,Dress,1,4666,4666,2024-05-07,0.28,Credit Card
+57,Rohit Malhotra,South,Furniture,Sofa,4,4235,16940,2024-08-06,0.25,Cash
+58,Pooja Nair,West,Furniture,Sofa,2,2371,4742,2025-01-27,0.23,Cash
+59,Ananya Joshi,East,Furniture,Table,3,2020,6060,2024-05-19,0.1,Credit Card
+60,Vikram Desai,South,Clothing,Dress,2,1852,3704,2024-02-02,0.12,UPI
+61,Meera Menon,West,Furniture,Table,2,3541,7082,2024-07-18,0.27,Credit Card
+62,Parth Patel,West,Furniture,Table,3,2546,7638,2025-01-20,0.12,Cash
+63,Meera Menon,South,Furniture,Chair,3,3670,11010,2024-09-05,0.01,UPI
+64,Manoj Bhat,South,Furniture,Chair,5,4475,22375,2024-01-14,0.27,Credit Card
+65,Amit Verma,West,Clothing,Dress,2,511,1022,2024-05-13,0.11,Debit Card

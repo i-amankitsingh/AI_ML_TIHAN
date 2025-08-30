@@ -1,0 +1,351 @@
+Machine Learning Foundations: Linearity, Non-linearity & Outliers
+Prerequisites:
+
+Python basics (variables, loops, print())
+
+NumPy arrays & Pandas DataFrames
+
+Basic regression (linear, logistic)
+
+Ability to run Jupyter/Google Colab
+
+1) Definition
+This session introduced how models fit data, and why understanding linearity vs. non-linearity is critical. It explained:
+
+How digital apps use ML (backend logic like Uber pricing)
+
+Why NumPy sits at the center of the Python data ecosystem
+
+Difference between sequential & parallel data processing
+
+How outliers distort results
+
+How to interpret parameters (bias & weights) in regression
+
+2) Why it matters
+Choosing the wrong model (linear for non-linear data) → poor predictions
+
+Outliers skew mean, regression lines, and evaluation metrics
+
+Real-world data rarely behaves perfectly linear
+
+Understanding data nature = foundation for model selection
+
+Generalization ensures model works on new data, not just training data
+
+3) Core Concepts
+a) High-Level Application Architecture
+Frontend → User interface (app/web screen)
+
+Backend → Server logic (ML models, APIs)
+
+Database → Storage of users, transactions, logs
+
+Business Logic → Determines how decisions are made
+
+Example:
+In ride-hailing apps like Uber/Ola:
+
+# Backend receives request input_data = {"from": "A", "to": "B", "time": "peak"}
+predicted_price = ml_model.predict(input_data)
+Instead of fixed ₹30/km, ML adjusts for time, demand, location.
+
+b) Libraries & Tools
+NumPy = Core numerical engine
+
+Arrays, linear algebra, broadcasting
+Built on NumPy:
+
+Pandas → Data manipulation
+
+Matplotlib → Basic plotting
+
+Seaborn → Simplified statistical plots
+
+SKLearn → Machine learning
+
+TensorFlow → Deep learning
+
+import numpy as np
+arr = np.array([1,2,3,4])
+print(arr**2)  # [1, 4, 9, 16]
+import pandas as pd, matplotlib.pyplot as plt
+data = pd.Series([1,3,2,4])
+data.plot(kind="bar"); plt.show()
+import seaborn as sns
+tips = sns.load_dataset("tips")
+sns.boxplot(x="day", y="total_bill", data=tips)
+plt.show()
+c) Sequential vs Parallel Processing
+Pandas → sequential (one step after another)
+
+Spark → parallel (distributes tasks across multiple CPUs)
+
+# Pandas (slow on 50M rows)
+df = pd.read_csv("big.csv")
+print(df["col"].mean())
+
+# Spark (fast, parallel)
+from pyspark.sql import SparkSession
+spark = SparkSession.builder.appName("example").getOrCreate()
+df_spark = spark.read.csv("big.csv", header=True, inferSchema=True)
+print(df_spark.selectExpr("avg(col)").collect())
+💡 _Rule of Thumb:_ Use Spark when dataset > **5 million rows**.
+d) Linearity & Non-linearity
+Linear relationship:
+
+y = α + βx
+
+where α = intercept (bias) and β = slope (weight)
+
+Non-linear: Relationship curves. E.g., income ↑ → spending ↑ until a point → then declines (savings).
+
+import numpy as np, matplotlib.pyplot as plt
+x = np.linspace(0,10,100)
+y_linear = 2*x + 3
+y_nonlinear = -0.5*(x-5)**2 + 20
+plt.plot(x, y_linear, label="Linear")
+plt.plot(x, y_nonlinear, label="Non-linear")
+plt.legend(); plt.show()
+Linearity & Non-linearity
+
+e) Model Fitting & Generalization
+Analogy: Tailor fitting T-shirts
+
+Tailor uses medium measurements with margin → fits most people
+
+ML model must generalize, not memorize every data point
+
+f) Parameters
+Intercept (α / bias) = minimum value even when x=0
+
+Coefficient (β / weight) = effect of x on y
+
+Notations:
+
+Stats: y = mx + c
+
+ML: y = βx + α
+
+Deep Learning: y = W·X + b
+
+g) Outliers vs Distribution
+Distribution = majority pattern
+
+Outliers = rare, extreme values
+
+Example: Student scores ~60–70, but one scores 99 (high outlier), another 35 (low outlier).
+
+import seaborn as sns, pandas as pd, matplotlib.pyplot as plt
+scores = pd.DataFrame({"marks":[60,62,70,65,61,95,55,58,54,100]})
+sns.boxplot(x=scores["marks"]); plt.show()
+download (2)
+
+h) Impact on Statistics
+Mean gets pulled by outliers
+
+Median resists outliers
+
+import numpy as np
+data = [30,32,31,29,28,1000]  # 1000 = outlier
+print("Mean:", np.mean(data))
+print("Median:", np.median(data))
+i) Categorical Variable Encoding
+import pandas as pd 
+from sklearn.linear_model import LinearRegression
+
+data = pd.DataFrame({ "bill":[10,20,30], "gender":["Male","Female","Male"]
+})
+encoded = pd.get_dummies(data, columns=["gender"], drop_first=True)
+X = encoded[["bill","gender_Male"]]; y=[1,2,3]
+
+model = LinearRegression().fit(X,y) 
+print(model.coef_)
+The formula becomes:
+
+y = b + w1 * bill + w2 * gender
+
+j) Model Training & Evaluation
+Steps:
+
+Split data (80% train, 20% test)
+
+Train model on training set
+
+Predict test set
+
+Evaluate with metrics
+
+from sklearn.linear_model import LinearRegression
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import mean_squared_error
+import numpy as np
+# Data
+X = np.arange(10).reshape(-1,  1)
+y = 2 * X.flatten() + 1
+# Train-test split
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+# Model training
+model = LinearRegression().fit(X_train, y_train)
+# Predictions
+y_pred = model.predict(X_test)
+# RMSE
+rmse = np.sqrt(mean_squared_error(y_test, y_pred))
+print("RMSE:", rmse)
+k) Choosing the Right Model
+Linear regression → simple straight-line relation
+
+Polynomial / non-linear → curving data
+
+Neural networks → handle highly complex patterns & noise
+
+Trade-off: Complexity vs explainability
+
+4) Real-World Analogy
+Tailor analogy: model fitting = T-shirt sizing
+
+Noise cancellation analogy: Outliers = background noise → model must detect signal vs noise
+
+5) Common Pitfalls & Fixes
+Pitfall	What happens	Fix
+Use linear model on curved data	Wrong predictions	Check scatter plot before modeling
+Remove all outliers	Lose genuine cases	Investigate context
+Confuse inconsistency with outlier	Wrong cleaning	E.g. Age=225 = error, not outlier
+Use mean on skewed data	Misleading	Use median
+6) Practical Applications
+Uber/Ola pricing (backend ML logic)
+
+Salary reports → mean vs median salaries mislead
+
+Restaurant tips dataset → shows how bills, tips, and group size affect model fitting
+
+Stock prices → highly non-linear, difficult to model with linear regression
+
+7) Check Yourself
+Why is generalization better than overfitting?
+
+What’s the difference between an outlier and inconsistent data?
+
+How do Spark and Pandas differ in processing large datasets?
+
+Answers:
+
+Generalization fits majority, works on new data; overfitting memorizes noise.
+
+Outlier = rare but valid; inconsistency = wrong/invalid data.
+
+Pandas = sequential (slow for big data), Spark = parallel (fast for big data).
+
+8) Practice Task
+Use the tips dataset (Seaborn):
+
+Build regression model predicting tip from bill + gender + smoker + group size.
+
+Visualize outliers with boxplots.
+
+Run model with & without outliers → compare RMSE.
+
+Hint: Use sns.load_dataset("tips").
+
+9) TL;DR
+Linearity check is critical → wrong assumption breaks models
+
+Outliers ≠ errors → investigate before removal
+
+Generalization > memorization
+
+NumPy = core, Pandas/Seaborn/SKLearn built on it
+
+Big data → Spark; small data → Pandas
+
+Quick Reference: ML Terms
+Linearity — A straight-line relationship between input (x) and output (y).
+
+Non-linearity — Any curved/threshold relationship that a straight line can’t capture.
+
+Regression — Predicting a numeric value (e.g., price) from one or more inputs.
+
+Linear Regression — Regression that fits a straight line/plane to the data.
+
+Polynomial Regression — Regression that uses curved terms (e.g., x², x³) to fit bends.
+
+Logistic Regression — A classifier that predicts probabilities for two classes (0/1).
+
+Feature (X) — An input variable used by the model (e.g., bill amount, BMI).
+
+Target (y) — The value the model tries to predict (e.g., tip amount).
+
+Intercept / Bias (α, b) — The model’s baseline value when all inputs are zero.
+
+Coefficient / Weight (β, W) — How much the prediction changes when an input rises by one unit.
+
+Generalization — The model’s ability to perform well on new, unseen data.
+
+Overfitting — When a model memorizes noise in training data and fails on new data.
+
+Underfitting — When a model is too simple and misses real patterns in data.
+
+Distribution — How values are spread (typical range vs. rare extremes).
+
+Outlier — A data point far from the rest (unusual but not always wrong).
+
+Inconsistent Data — Impossible or erroneous values (e.g., age = 225).
+
+Mean (Average) — Sum divided by count; pulled by outliers.
+
+Median — Middle value; robust to outliers.
+
+Residual — Error for one example: actual − predicted.
+
+MSE / RMSE — Mean (Root Mean) Squared Error; common regression error metrics.
+
+R² (R-squared) — Fraction of target variance explained by the model (0–1).
+
+Train–Test Split — Divide data to train the model (train) and check it (test).
+
+Validation Set — Optional third split used for model/parameter tuning.
+
+One-Hot Encoding — Turn categories into 0/1 columns (Male→[1,0], Female→[0,1]).
+
+Dummy Variable — A 0/1 column representing one category (from one-hot encoding).
+
+Categorical Variable — Text/category input (e.g., day = Mon/Tue/…); needs encoding.
+
+Standardization — Rescale a variable to mean 0 and std-dev 1.
+
+Polynomial Features — Extra features like x², x³ to capture curvature.
+
+Broadcasting (NumPy) — Automatic expansion of arrays to align shapes in operations.
+
+Sequential Processing (Pandas) — Work happens step-by-step on one machine.
+
+Parallel / Distributed Processing (Spark) — Work split across many machines/cores.
+
+API — A programmatic interface that lets apps call your model (e.g., to get a price).
+
+Pipeline — A chain of steps: clean data → train → evaluate → deploy.
+
+Matplotlib — Base plotting library in Python.
+
+Seaborn — High-level plotting library built on Matplotlib (quicker stats visuals).
+
+scikit-learn (SKLearn) — Standard Python library for classic ML.
+
+NumPy — Core numeric library; arrays and fast math for everything else.
+
+Pandas — Tables (DataFrames) for cleaning/joining/filtering data.
+
+TensorFlow — Deep learning framework for neural networks.
+
+Histogram — Bars showing how often values fall into ranges.
+
+Boxplot — A summary of distribution (median, quartiles, outliers).
+
+Scatter Plot — Dots showing the relationship between two variables.
+
+KDE (Kernel Density Estimate) — A smooth curve showing data density.
+
+Thank You
+Thanks for learning with us!
+Keep experimenting with small datasets, plot before you model, and prefer clarity over complexity.
+Questions or doubts? Note them down right away—curiosity compounds just like interest.

@@ -1,0 +1,44 @@
+Pre-Class Notes – ML Pipelines with scikit-learn (B1)
+1. What is a Pipeline in ML?
+
+A way to connect multiple steps (data preprocessing, model training) into a single workflow.
+Helps keep code clean, reusable, and less error-prone.
+2. Why use Pipelines?
+
+Automates repetitive tasks.
+Ensures same preprocessing is applied to both training and test data.
+Makes experiments easier to manage.
+3. Basic Structure in scikit-learn
+
+
+from sklearn.pipeline import Pipeline
+
+pipeline = Pipeline([
+    ('step_name1', transformer1),
+    ('step_name2', transformer2),
+    ('model', estimator)
+])
+4. Common Steps in a Pipeline
+
+Preprocessing: Scaling, encoding, missing value handling.
+Feature Selection: Picking important features.
+Model Training: Fitting a chosen algorithm.
+5. Key Benefits
+
+One command to fit and predict.
+Reduces chances of data leakage.
+Easy to tune parameters using GridSearchCV with the pipeline.
+💡 Quick Example:
+
+
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import StandardScaler
+from sklearn.linear_model import LogisticRegression
+
+pipe = Pipeline([
+    ('scaler', StandardScaler()),
+    ('model', LogisticRegression())
+])
+
+pipe.fit(X_train, y_train)
+y_pred = pipe.predict(X_test)

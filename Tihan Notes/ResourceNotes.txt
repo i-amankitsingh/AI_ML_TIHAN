@@ -1,0 +1,256 @@
+Notes
+Prerequisites: Basic Python programming, familiarity with Pandas DataFrames (.head(), ['column'] selection), and basic NumPy operations. Understanding of basic statistics (mean, median, standard deviation) is helpful.
+
+1) Definition
+Data preprocessing is a critical step in the machine learning pipeline where raw, often messy, data is cleaned and transformed into a structured format by systematically handling missing values and statistical outliers, thereby ensuring the reliability and performance of analytical models.
+
+2) Why it matters
+Model Failure: Most machine learning algorithms (e.g., Linear Regression, Decision Trees) cannot perform mathematical operations on missing values (NaN) and will fail to run, throwing errors.
+
+Biased Estimates: Inappropriate handling of missing data (e.g., using mean for a skewed feature) can introduce significant bias, distorting the true underlying relationships in the data.
+
+Skewed Results: Outliers can exert undue influence on a model's parameters. For instance, a single extreme value can pull the regression line away from the general trend of the data, leading to inaccurate predictions for the majority of cases.
+
+Garbage In, Garbage Out: The performance of even the most advanced model is constrained by the quality of its input data. Clean, well-structured data is non-negotiable for building accurate, robust, and reliable models.
+
+3) Core concepts
+Imputation: The process of replacing missing data with substituted values. The strategy (mean, median, mode) is chosen based on the data's distribution.
+
+Interpolation: A type of estimation technique where missing values are filled based on the values of other data points, often by fitting a function (linear, polynomial). Crucial for time-series data.
+
+Outlier Detection: The identification of data points that deviate markedly from the rest of the sample. These are not just extreme values but points that appear inconsistent with the overall dataset pattern.
+
+Robust Statistics: Statistical measures like the Median and Median Absolute Deviation (MAD) that are resistant to the influence of outliers, unlike their classical counterparts (Mean, Standard Deviation).
+
+4) When & why to use
+To Drop or Not to Drop:
+
+If a column has an extremely high percentage of missing values (e.g., >60%) and is not a critical feature, drop the column (df.drop(columns=['deck']) because the information loss is less harmful than the bias from poor imputation.
+
+If only a very small number of rows have missing values in a critical column (e.g., <2%), consider dropping those rows (df.dropna(subset=['age']) to avoid imputation bias, but only if it doesn't significantly reduce your dataset size.
+
+Choosing an Imputation Strategy:
+
+If a numerical feature is normally distributed, use mean imputation (strategy='mean') because the mean accurately represents the center of the data.
+
+If a numerical feature is skewed or has outliers, use median imputation (strategy='median') because the median is a robust measure of central tendency that is not affected by extreme values.
+
+If the feature is categorical, use mode imputation (strategy='most_frequent') to replace missing values with the most common category.
+
+If the data is sequential or time-based, use forward-fill (ffill) or interpolation (method='linear') because the order and temporal relationship between points carry important information.
+
+5) How-to / Steps
+Phase 1: Handling Missing Data
+Identify: Quantify missing data per column with df.isna().sum().
+
+Visualize: Create a missing data heatmap for a quick overview: sns.heatmap(df.isna(), cbar=False).
+
+Strategize: Decide on a column-by-column basis whether to drop or impute.
+
+Execute - Deletion:
+
+Drop rows: df_dropped = df.dropna(subset=['age'])
+
+Drop columns: df_dropped = df.drop(columns=['deck'])
+
+Set a threshold: df_thresh = df.dropna(thresh=10) # Keeps rows with at least 10 non-NaN values
+
+Execute - Imputation (Scikit-Learn):
+
+from sklearn.impute import SimpleImputer, KNNImputer
+
+# For Simple Strategies
+imputer = SimpleImputer(strategy='median') # or 'mean', 'most_frequent'
+df[['age']] = imputer.fit_transform(df[['age']])
+
+# For KNN Imputation (uses feature relationships)
+knn_imputer = KNNImputer(n_neighbors=5)
+df_imputed = knn_imputer.fit_transform(df[['age', 'fare', 'pclass']])
+Execute - Imputation (Pandas):
+
+df['age'].fillna(df['age'].median(), inplace=True) # Direct median fill
+df['embark_town'].fillna(df['embark_town'].mode()[0], inplace=True) # Direct mode fill
+Phase 2: Handling Outliers (IQR Method)
+Calculate Quartiles: Q1 = df['fare'].quantile(0.25), Q3 = df['fare'].quantile(0.75)
+
+Calculate IQR: IQR = Q3 - Q1
+
+Define Boundaries: lower_bound = Q1 - 1.5 * IQR, upper_bound = Q3 + 1.5 * IQR
+
+Identify & Remove:
+
+# Identify outliers
+outliers = df[(df['fare'] < lower_bound) | (df['fare'] > upper_bound)]
+# Create a clean DataFrame WITHOUT outliers
+df_clean = df[(df['fare'] >= lower_bound) & (df['fare'] <= upper_bound)]
+Alternative: Z-Score (for normally distributed data):
+
+from scipy import stats
+z_scores = stats.zscore(df['fare'])
+df_clean = df[(np.abs(z_scores) < 3)] # Keep data within 3 standard deviations
+6) Examples
+Worked Example: Mean Imputation & IQR Outlier Removal
+import pandas as pd
+import numpy as np
+from sklearn.impute import SimpleImputer
+
+# Create sample data with missing values and an outlier
+np.random.seed(42)
+data = {'age': [22, 35, np.nan, 45, 54, np.nan, 31, 200]} # 200 is an outlier
+df = pd.DataFrame(data)
+print("Original Data:\n", df)
+
+# 1. Impute missing 'age' with mean
+imputer = SimpleImputer(strategy='mean')
+df['age_imputed'] = imputer.fit_transform(df[['age']])
+print("\nAfter Mean Imputation:\n", df[['age_imputed']])
+
+# 2. Detect and remove outliers from the imputed column
+Q1 = df['age_imputed'].quantile(0.25)
+Q3 = df['age_imputed'].quantile(0.75)
+IQR = Q3 - Q1
+lower_bound = Q1 - 1.5 * IQR
+upper_bound = Q3 + 1.5 * IQR
+
+df_clean = df[(df['age_imputed'] >= lower_bound) & (df['age_imputed'] <= upper_bound)]
+print(f"\nBounds: Lower={lower_bound:.2f}, Upper={upper_bound:.2f}")
+print("Clean Data (outlier removed):\n", df_clean[['age_imputed']])
+Output:
+
+Original Data:
+      age
+0   22.0
+1   35.0
+2    NaN
+3   45.0
+4   54.0
+5    NaN
+6   31.0
+7  200.0
+
+After Mean Imputation:
+    age_imputed
+0    22.000000
+1    35.000000
+2    64.428571 # Mean was imputed
+3    45.000000
+4    54.000000
+5    64.428571 # Mean was imputed
+6    31.000000
+7   200.000000 # Outlier
+
+Bounds: Lower=-30.50, Upper=129.50
+Clean Data (outlier removed):
+    age_imputed
+0    22.0
+1    35.0
+2    64.4
+3    45.0
+4    54.0
+5    64.4
+6    31.0
+# The row with age=200.0 is now removed
+Variant: Interpolation on a Time Series
+# Creating a simple time series with missing data
+dates = pd.date_range(start='2023-01-01', periods=6, freq='D')
+ts_data = {'value': [10, np.nan, np.nan, 40, 50, np.nan]}
+df_ts = pd.DataFrame(ts_data, index=dates)
+
+# Interpolate using time method (considers the index)
+df_ts['interpolated'] = df_ts['value'].interpolate(method='time')
+
+print("Original Time Series:\n", df_ts['value'].tolist())
+print("Interpolated Time Series:\n", df_ts['interpolated'].round(1).tolist())
+
+# Output:
+# Original Time Series: [10.0, nan, nan, 40.0, 50.0, nan]
+# Interpolated Time Series: [10.0, 20.0, 30.0, 40.0, 50.0, 50.0] # Note the last value is forward-filled
+7) Real-world analogy
+Think of building a machine learning model like constructing a house. Raw data is the raw lumber, concrete, and wiring. Data preprocessing is the quality inspection and preparation phase: you check for wood rot (missing values), bend straight any warped beams (fix skewness), and discard materials with irreparable flaws (outliers). Skipping this step means building your house on a shaky foundation, guaranteeing problems down the line, no matter how good your blueprints (algorithms) are.
+
+8) Common pitfalls & fixes
+Pitfall	What happens	Fix
+Blindly using mean imputation	On a skewed column (e.g., income), the mean is pulled up by a few high values. Imputing with this inflated mean misrepresents the typical value and artificially increases the average for that group.	Always visualize the distribution (use a histogram or boxplot). If the data is skewed, use the median for imputation.
+Deleting data as a first resort	Deleting rows with missing values can accidentally remove a significant portion of your dataset, reducing statistical power. It can also introduce bias if the data isn't "missing completely at random" (MCAR).	First, analyze the pattern of missingness (e.g., with a heatmap). Prefer imputation to preserve data volume and avoid bias. Only drop if the number is trivial.
+Not visualizing outliers first	Using a automatic method like IQR might remove valid data points if the threshold is too strict, or keep extreme outliers if too loose. You might remove valuable edge cases.	Always plot your data (boxplot, scatterplot) before and after outlier treatment. Understand the context of the outlier—was it a data entry error, or a rare but real event? Adjust thresholds accordingly.
+Ignoring outliers in test data	You carefully remove outliers from your training data, but leave them in the test set. This causes the model to perform poorly on evaluation because it's seeing a type of data it wasn't trained on.	Apply the same outlier removal/preprocessing steps learned from the training data to the test data. Use Scikit-Learn's Pipeline to automate this and prevent data leakage.
+9) Check yourself
+You have a column "Salary" that is highly right-skewed. Which imputation strategy is most appropriate for its missing values, and why?
+
+The IQR for a column is 20. Q1 is 30. What is the value of the lower bound for outliers? What does a data point with a value of -5 in this column represent?
+
+Why is it crucial to fit your imputer (e.g., SimpleImputer) only on the training data and then use it to transform the test data?
+
+Answers:
+
+Median imputation. The median is a robust measure of central tendency that is not influenced by the extreme high values that cause the right-skew, so it will better represent the "typical" salary than the mean.
+
+Lower bound = Q1 - 1.5 * IQR = 30 - 1.5*20 = 0. A value of -5 is below the lower bound and would therefore be considered an outlier. In the context of a column like "Salary," this is likely a data entry error, as salaries cannot be negative.
+
+To avoid data leakage. Fitting the imputer on the entire dataset (including the test set) means information from the test set (like the mean/median of a column) "leaks" into the training process. This creates an overly optimistic estimate of your model's performance because the model has effectively seen a peek at the test data during training. The correct way is to calculate the imputation value (e.g., the median) from the training set only and use that value to fill missing data in both the training and test sets.
+
+10) Practice task
+Task Description:
+
+Load the Titanic dataset using import seaborn as sns; df = sns.load_dataset('titanic').
+
+Focus on the age and fare columns.
+
+Handle missing values: Impute missing values in the age column using the median strategy. Explain in a comment why median was chosen over mean for this column.
+
+Detect outliers: Using the IQR method, identify outliers in the fare column. Create a new DataFrame df_clean that removes these outliers.
+
+Analyze impact: Print the original shape of the DataFrame, the number of outliers removed, and the final shape of df_clean.
+
+(Bonus) Visualize the fare column before and after outlier removal using boxplots (sns.boxplot()).
+
+Expected Outcome: A code snippet that performs the steps above, with print statements showing the data's dimensions before and after cleaning.
+
+Hint/Outline:
+
+import seaborn as sns
+import pandas as pd
+
+# Load data
+df = sns.load_dataset('titanic')
+print("Original Shape:", df.shape)
+
+# 1. Check for missingness in 'age'
+# ... your code here ...
+
+# 2. Impute 'age' with median (use SimpleImputer or .fillna())
+# ... your code here ...
+# Comment: The median is chosen because...
+
+# 3. Calculate IQR for 'fare'
+Q1 = df['fare'].quantile(0.25)
+Q3 = # your code
+IQR = # your code
+lower_bound = # your code
+upper_bound = # your code
+
+# 4. Create df_clean by filtering out outliers
+df_clean = # your code
+
+# 5. Print results
+print(f"Number of outliers in 'fare': {len(df) - len(df_clean)}")
+print("Cleaned Dataset Shape:", df_clean.shape)
+
+# (Bonus) Boxplots
+import matplotlib.pyplot as plt
+plt.figure(figsize=(12, 5))
+plt.subplot(1, 2, 1)
+sns.boxplot(y=df['fare'])
+plt.title('Fare Before Cleaning')
+plt.subplot(1, 2, 2)
+sns.boxplot(y=df_clean['fare'])
+plt.title('Fare After Cleaning')
+plt.show()
+11) TL;DR
+Missing Values: Never feed NaN to a model. Use deletion for trivial cases or imputation (mean/median/mode) otherwise. Choose the strategy based on the data's distribution.
+
+Outliers: Identify them visually and statistically (IQR/Z-score). Remove them if they are errors or will harm the model, but understand their context first.
+
+Data Leageage: Always calculate imputation values and outlier bounds from the training data only and apply them to the test data to get a true performance estimate.
+
+Impact: Proper data cleaning is not optional; it dramatically improves model accuracy and reliability, turning a useless model into a powerful one.

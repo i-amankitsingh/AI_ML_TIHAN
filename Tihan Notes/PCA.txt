@@ -1,0 +1,104 @@
+Pre-Class Notes: Principal Component Analysis (PCA)
+Why should you care about PCA?
+Many datasets today have too many features (Titanic ~15, others = thousands).
+
+High dimensions =
+
+Harder to visualize
+
+Slower to process
+
+Lots of redundant information
+
+PCA helps by shrinking the number of features while keeping most of the important information.
+
+Big Ideas Behind PCA
+Variance → tells us how “spread out” the data is. More variance = more useful info.
+
+Covariance → tells us how features move together.
+
+Covariance Matrix → puts all feature relationships in one table.
+
+Eigenvectors → special directions that capture the maximum variance (called principal components).
+
+Eigenvalues → numbers showing how important each eigenvector is.
+
+How PCA Works (Step-by-Step)
+Start with your data (matrix X).
+
+Center it by subtracting the mean.
+
+Compute the covariance matrix.
+
+Find eigenvalues & eigenvectors.
+
+Sort them by importance (largest eigenvalue first).
+
+Pick the top k components.
+
+Project data into this new smaller subspace.
+
+Applications You’ll See
+Iris dataset: reduced 4 features → 2, still keeps ~94% info.
+
+Titanic dataset: reduced 5 → 2, keeps ~66% info.
+
+Great for visualization (2D/3D plots).
+
+Often used before ML models:
+
+Logistic Regression with all features → 80% accuracy
+
+Logistic Regression with PCA(2) features → ~66% accuracy
+
+Extra Nuggets
+PCA components are always orthogonal (independent).
+
+Noise usually shows up as low variance, so PCA helps reduce it.
+
+How many components? → Depends on how much variance you want to keep.
+
+Combine PCA with feature engineering for best results.
+
+To really master PCA → revise eigenvalues & eigenvectors.
+
+Tool to use: sklearn.decomposition.PCA.
+
+👉 Think before class:
+
+Why might reducing features sometimes hurt accuracy but still be useful?
+
+Can you think of a dataset where visualization in 2D/3D would really help?
+
+
+PCA (Principal Component Analysis) – Quick Notes
+Why PCA?
+Datasets often have many features (e.g., Titanic = 15, others = thousands).
+High dimensions → harder to visualize, slower to process, redundant info.
+PCA reduces features into new components while keeping most information.
+Core Ideas
+Variance = spread of data; higher variance = more informative.
+Covariance = relationship between two features.
+Covariance Matrix = summarizes all feature relationships.
+Eigenvectors = directions of max variance (principal components).
+Eigenvalues = importance/weight of those directions.
+PCA Algorithm Steps
+Start with data matrix X (N × D).
+Center data → subtract mean.
+Compute covariance matrix.
+Find eigenvalues & eigenvectors.
+Sort eigenvectors by eigenvalues (largest → most important).
+Select top k components.
+Project data into new k-dimensional subspace.
+Applications & Examples
+Iris dataset: 4 → 2 features, ~94% variance preserved.
+Titanic dataset: 5 → 2 features, ~66% variance preserved.
+Helps with visualization (2D/3D) and preprocessing before ML models.
+Logistic regression: full features = 80% accuracy; PCA(2) features = ~66%.
+Extra Notes
+PCA components are orthogonal (independent).
+Noise usually has low variance, so PCA reduces its effect.
+Number of components depends on desired variance retention.
+Feature engineering (e.g., family size, child indicator) can complement PCA.
+Learn linear algebra (eigenvalues/vectors) for deeper understanding.
+Tool: sklearn.decomposition.PCA.

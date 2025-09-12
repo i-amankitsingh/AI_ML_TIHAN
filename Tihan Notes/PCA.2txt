@@ -1,0 +1,112 @@
+Lecture Notes — Principal Component Analysis (PCA)
+1. Introduction
+PCA is a dimensionality reduction technique.
+
+Helps when datasets have high dimensions (e.g., brain imaging data with sensors × time points × objects).
+
+Goal: find directions (components) where variance is maximized, enabling better visualization, faster processing, and noise reduction.
+
+2. Core Concepts
+Variance
+Variance = spread of data. High variance = more information.
+
+Features with low variance may be noise or uninformative.
+
+Example:
+
+Age column in Class 10 dataset → low variance (students mostly same age).
+
+Marks column → high variance (useful for ranking).
+
+Covariance
+Measures relationship between two features.
+
+> 0 → increase in X → increase in Y.
+
+< 0 → increase in X → decrease in Y.
+
+= 0 → independent.
+
+Generalized via Covariance Matrix in multiple dimensions.
+
+Eigenvalues & Eigenvectors
+Eigenvector = direction that does not change when transformed by matrix.
+
+Eigenvalue = factor by which magnitude changes.
+
+In PCA:
+
+Eigenvectors = new axes (principal components).
+
+Eigenvalues = amount of variance captured by those axes.
+
+3. PCA Algorithm (Step-by-Step)
+Input data matrix XXX (n rows × d features).
+
+Standardize (subtract mean, scale).
+
+Compute covariance matrix of XXX.
+
+Find eigenvalues & eigenvectors.
+
+Sort eigenvectors by descending eigenvalues.
+
+Select top k eigenvectors → form projection matrix.
+
+Project original data onto new subspace.
+
+4. Example (Iris Dataset)
+Features: sepal length, sepal width, petal length, petal width.
+
+Variance check: petal length has highest variance, sepal width lowest.
+
+PCA combines all features to preserve total variance while reducing dimensions.
+
+Example:
+
+Original = 4D.
+
+PCA with 2 components = captures >95% variance.
+
+First component alone ≈ 92% variance.
+
+5. Practical Tools in Scikit-Learn
+PCA().fit(X)
+
+Key functions:
+
+.components_ → eigenvectors (principal components).
+
+.explained_variance_ → eigenvalues (variance captured).
+
+.explained_variance_ratio_ → proportion of variance explained.
+
+Visualization:
+
+Elbow Plot (cumulative variance vs. components) helps decide how many PCs to keep.
+6. When to Use PCA
+Features are highly correlated (check correlation matrix or high VIF).
+
+To visualize high-dimensional data in 2D/3D.
+
+To denoise data (low-variance/noisy features discarded).
+
+For faster training and reduced storage.
+
+For models that benefit from orthogonal inputs (e.g., linear/logistic regression).
+
+When NOT to Use PCA
+If interpretability matters (PCs are linear combinations, not original features).
+
+With categorical or sparse data → use encoding instead.
+
+If data is nonlinear → use Kernel PCA.
+
+If dataset already has very few features, PCA is unnecessary.
+
+7. Key Pitfalls & Fixes (Template Style)
+Pitfall	What happens	Fix
+Using all features without checking correlation	Redundancy, noise in model	Apply PCA or drop correlated features
+Keeping too many PCs	No real reduction, still slow	Use elbow plot to pick optimal PCs
+Misinterpreting PCs	Loss of meaning from original features	Use PCA only when prediction > interpretability
+Assuming variance = class separation	High variance ≠ better prediction	Validate with downstream ML models

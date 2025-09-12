@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import scikit
 from sklearn.linear_model import LinearRegression
-from sklearn.metrics import mean_squared_error
+from sklearn.metrics import mean_squared_error, r2_score, mean_absolute_error
 from sklearn.model_selection import train_test_split
 from math import sqrt
 import time
@@ -21,9 +21,21 @@ from sklearn.metrics import accuracy_score, classification_report
 import skl2onnx
 from skl2onnx import convert_sklearn
 from skl2onnx.common.data_types import FloatTensorType
+from sklearn.pipeline import Pipeline
 
 # from tensorflow.keras import Sequential
 # from tensorflow.keras.layers import Dense
+
+import gradio as gr
+
+from sklearn.compose import ColumnTransformer
+from sklearn.preprocessing import OneHotEncoder, StandardScaler
+from sklearn.neural_network import MLPRegressor
+from sklearn.compose import ColumnTransformer
+from sklearn.neural_network import MLPClassifier
+from sklearn.metrics import accuracy_score
+from sklearn.datasets import load_boston
+
 
 '''
 # ✅ A ML Foundations & Data Preprocessing
@@ -383,4 +395,431 @@ df["roll"] = np.arctan2(df["ay_ms2"], df["az_ms2"]) * 180/np.pi
 df["pitch"] = np.arctan2(-df["ax_ms2"], np.sqrt(df["ay_ms2"] ** 2 + df["az_ms2"] ** 2)) * 180/np.pi
 
 print(df)
+
+
+# 5
+df = pd.read_csv("./MachineLearning/uav_raw.csv")
+
+df["timestamp"] = pd.to_datetime(df["timestamp"])
+
+df["alt_fused_m"] = 0.7 * df["alt_baro_m"] + 0.3 * df["alt_gps_m"]
+
+plt.figure(figsize=(10, 5))
+plt.plot(df["timestamp"], df["alt_baro_m"], label="Baro Altitude (m)")
+plt.plot(df["timestamp"], df["alt_gps_m"], label="GPS Altitude (m)")
+plt.plot(df["timestamp"], df["alt_fused_m"], label="Fused Altitude (m)")
+
+plt.title("Altitude Comparison: Barometer vs GPS vs Fused")
+plt.xlabel("Time")
+plt.ylabel("Altitude (m)")
+plt.legend()
+plt.tight_layout()
+plt.show()
+
+
+#6
+
+df = pd.read_csv("./MachineLearning/uav_raw.csv")
+
+df["timestamp"] = pd.to_datetime(df["timestamp"])
+
+plt.figure(figsize=(10, 5))
+plt.plot(df["timestamp"], df["battery_pct"], marker="o", linestyle="-", label="Battery %")
+
+plt.title("Battery Percentage Over Time")
+plt.xlabel("Time")
+plt.ylabel("Battery (%)")
+plt.ylim(0, 100) 
+plt.legend()
+plt.tight_layout()
+plt.show()
+
+
+# 7
+df = pd.read_csv("./MachineLearning/uav_raw.csv")
+
+df["timestamp"] = pd.to_datetime(df["timestamp"])
+
+df = df.drop_duplicates()
+
+df = df.sort_values(by="timestamp").reset_index(drop=True)
+
+print(df.head())  
+
+
+# 8
+
+df = pd.read_csv("./MachineLearning/uav_raw.csv")
+df["timestamp"] = pd.to_datetime(df["timestamp"])
+
+df = df.drop_duplicates().sort_values(by="timestamp").reset_index(drop=True)
+
+
+df["battery_pct"] = pd.to_numeric(df["battery_pct"], errors="coerce") 
+df["battery_pct"] = df["battery_pct"].clip(lower=0, upper=100)
+
+print(df.head()) 
+
+
+# ✅ D) AI-Powered App Development
+
+# 1
+
+tips = sns.load_dataset("tips")
+
+df = pd.get_dummies(tips, drop_first=True)
+
+X = df.drop("tip", axis=1)
+y = df["tip"]
+
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+model = LinearRegression()
+model.fit(X_train, y_train)
+
+y_pred = model.predict(X_test)
+
+mse = mean_squared_error(y_test, y_pred)
+r2 = r2_score(y_test, y_pred)
+
+print("Mean Squared Error:", mse)
+print("R² Score:", r2)
+
+coef_df = pd.DataFrame({
+    "Feature": X.columns,
+    "Coefficient": model.coef_
+})
+print(coef_df)
+
+
+# 2
+
+tips = sns.load_dataset("tips")
+
+
+df = pd.get_dummies(tips, drop_first=True)
+
+
+X = df.drop("tip", axis=1)
+y = df["tip"]
+
+
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+
+model = LinearRegression()
+model.fit(X_train, y_train)
+
+
+def predict_tip(total_bill, size, sex, smoker, day, time):
+   
+    input_dict = {
+        "total_bill": [total_bill],
+        "size": [size],
+        "sex_Male": [1 if sex == "Male" else 0],
+        "smoker_Yes": [1 if smoker == "Yes" else 0],
+        "day_Sat": [1 if day == "Sat" else 0],
+        "day_Sun": [1 if day == "Sun" else 0],
+        "day_Thur": [1 if day == "Thur" else 0],
+        "time_Dinner": [1 if time == "Dinner" else 0],
+    }
+    
+    input_df = pd.DataFrame(input_dict)
+    prediction = model.predict(input_df)[0]
+    return round(prediction, 2)
+
+
+interface = gr.Interface(
+    fn=predict_tip,
+    inputs=[
+        gr.Number(label="Total Bill ($)"),
+        gr.Number(label="Party Size"),
+        gr.Radio(["Male", "Female"], label="Sex"),
+        gr.Radio(["Yes", "No"], label="Smoker"),
+        gr.Radio(["Thur", "Fri", "Sat", "Sun"], label="Day"),
+        gr.Radio(["Lunch", "Dinner"], label="Time"),
+    ],
+    outputs=gr.Number(label="Predicted Tip ($)"),
+    title="Tip Prediction App 💡",
+    description="Enter details to predict the tip amount using Linear Regression."
+)
+
+interface.launch()
+
+
+# 3
+
+
+tips = sns.load_dataset("tips")
+
+
+X = tips.drop("tip", axis=1)
+y = tips["tip"]
+
+
+categorical_cols = ["sex", "smoker", "day", "time"]
+numeric_cols = ["total_bill", "size"]
+
+
+preprocessor = ColumnTransformer(
+    transformers=[
+        ("cat", OneHotEncoder(drop="first"), categorical_cols),
+        ("num", "passthrough", numeric_cols)
+    ]
+)
+
+
+model = Pipeline(steps=[
+    ("preprocessor", preprocessor),
+    ("regressor", LinearRegression())
+])
+
+
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.2, random_state=42
+)
+
+
+model.fit(X_train, y_train)
+
+
+def predict_tip(total_bill, size, sex, smoker, day, time):
+    input_df = pd.DataFrame([{
+        "total_bill": total_bill,
+        "size": size,
+        "sex": sex,
+        "smoker": smoker,
+        "day": day,
+        "time": time,
+    }])
+    prediction = model.predict(input_df)[0]
+    return round(prediction, 2)
+
+
+interface = gr.Interface(
+    fn=predict_tip,
+    inputs=[
+        gr.Number(label="Total Bill ($)"),
+        gr.Number(label="Party Size"),
+        gr.Radio(["Male", "Female"], label="Sex"),
+        gr.Radio(["Yes", "No"], label="Smoker"),
+        gr.Radio(["Thur", "Fri", "Sat", "Sun"], label="Day"),
+        gr.Radio(["Lunch", "Dinner"], label="Time"),
+    ],
+    outputs=gr.Number(label="Predicted Tip"),
+    title="Tip Prediction App",
+    description="Enter details to predict the tip amount using Linear Regression."
+)
+
+interface.launch()
+
+
+#4
+
+tips = sns.load_dataset("tips")
+
+
+X = tips.drop("tip", axis=1)
+y = tips["tip"]
+
+
+categorical_cols = ["sex", "smoker", "day", "time"]
+numeric_cols = ["total_bill", "size"]
+
+
+preprocessor = ColumnTransformer(
+    transformers=[
+        ("cat", OneHotEncoder(drop="first"), categorical_cols),
+        ("num", "passthrough", numeric_cols)
+    ]
+)
+
+
+model = Pipeline(steps=[
+    ("preprocessor", preprocessor),
+    ("regressor", LinearRegression())
+])
+
+
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.2, random_state=42
+)
+
+
+model.fit(X_train, y_train)
+
+
+y_pred = model.predict(X_test)
+
+
+rmse = np.sqrt(mean_squared_error(y_test, y_pred))
+mae = mean_absolute_error(y_test, y_pred)
+
+print("Model Evaluation:")
+print(f"RMSE: {rmse:.2f}")
+print(f"MAE: {mae:.2f}")
+
+
+# 5
+
+ohe = model.named_steps["preprocessor"].named_transformers_["cat"]
+encoded_cols = ohe.get_feature_names_out(categorical_cols)
+all_features = list(encoded_cols) + numeric_cols
+
+
+coefficients = model.named_steps["regressor"].coef_
+
+coef_df = pd.DataFrame({
+    "Feature": all_features,
+    "Coefficient": coefficients
+}).sort_values(by="Coefficient", key=abs, ascending=False)
+
+
+plt.figure(figsize=(10, 5))
+plt.barh(coef_df["Feature"], coef_df["Coefficient"], color="skyblue")
+plt.axvline(0, color="black", linewidth=0.8)
+plt.title("Feature Importance (Linear Regression Coefficients)")
+plt.xlabel("Coefficient Value")
+plt.ylabel("Feature")
+plt.tight_layout()
+plt.show()
+
+
+
+# 6
+
+tips = sns.load_dataset("tips")
+
+
+X = tips.drop("tip", axis=1)
+y = tips["tip"]
+
+categorical_cols = ["sex", "smoker", "day", "time"]
+numeric_cols = ["total_bill", "size"]
+
+
+preprocessor = ColumnTransformer(
+    transformers=[
+        ("cat", OneHotEncoder(drop="first"), categorical_cols),
+        ("num", StandardScaler(), numeric_cols)
+    ]
+)
+
+
+mlp_model = Pipeline(steps=[
+    ("preprocessor", preprocessor),
+    ("regressor", MLPRegressor(hidden_layer_sizes=(64, 32), 
+                               activation="relu",
+                               solver="adam",
+                               max_iter=1000,
+                               random_state=42))
+])
+
+
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.2, random_state=42
+)
+
+
+mlp_model.fit(X_train, y_train)
+
+
+y_pred = mlp_model.predict(X_test)
+
+
+rmse = np.sqrt(mean_squared_error(y_test, y_pred))
+mae = mean_absolute_error(y_test, y_pred)
+r2 = r2_score(y_test, y_pred)
+
+print("MLP Model Evaluation:")
+print(f"RMSE: {rmse:.2f}")
+print(f"MAE: {mae:.2f}")
+print(f"R²: {r2:.2f}")
+
+# 7
+
+iris = load_iris()
+X, y = iris.data, iris.target
+
+
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.2, random_state=42, stratify=y
+)
+
+
+scaler = StandardScaler()
+X_train = scaler.fit_transform(X_train)
+X_test = scaler.transform(X_test)
+
+
+mlp = MLPClassifier(
+    hidden_layer_sizes=(50, 30),
+    activation="relu",
+    solver="adam",
+    max_iter=500,
+    random_state=42
+)
+
+
+mlp.fit(X_train, y_train)
+
+
+y_pred = mlp.predict(X_test)
+
+
+accuracy = accuracy_score(y_test, y_pred)
+print(f"MLP Accuracy on Test Set: {accuracy:.2f}")
 '''
+
+# 8
+
+boston = load_boston()
+X = pd.DataFrame(boston.data, columns=boston.feature_names)
+y = boston.target
+
+
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.2, random_state=42
+)
+
+
+model = Pipeline([
+    ("scaler", StandardScaler()),
+    ("regressor", LinearRegression())
+])
+
+
+model.fit(X_train, y_train)
+
+def predict_price(CRIM, ZN, INDUS, CHAS, NOX, RM, AGE, DIS, RAD, TAX, PTRATIO, B, LSTAT):
+    input_data = pd.DataFrame([[
+        CRIM, ZN, INDUS, CHAS, NOX, RM, AGE, DIS, RAD, TAX, PTRATIO, B, LSTAT
+    ]], columns=boston.feature_names)
+    
+    prediction = model.predict(input_data)[0]
+    return f"Predicted House Price: ${prediction*1000:.2f}"
+
+
+interface = gr.Interface(
+    fn=predict_price,
+    inputs=[
+        gr.Number(label="CRIM (Per capita crime rate)"),
+        gr.Number(label="ZN (Residential land zoned %)"),
+        gr.Number(label="INDUS (Non-retail business acres %)"),
+        gr.Number(label="CHAS (Charles River dummy variable: 0 or 1)"),
+        gr.Number(label="NOX (Nitric oxide concentration)"),
+        gr.Number(label="RM (Average rooms per dwelling)"),
+        gr.Number(label="AGE (Proportion of old units)"),
+        gr.Number(label="DIS (Distance to employment centers)"),
+        gr.Number(label="RAD (Accessibility to highways)"),
+        gr.Number(label="TAX (Property tax rate)"),
+        gr.Number(label="PTRATIO (Pupil-teacher ratio)"),
+        gr.Number(label="B (1000*(Bk - 0.63)^2, where Bk is proportion of blacks)"),
+        gr.Number(label="LSTAT (% lower status population)"),
+    ],
+    outputs="text",
+    title="House Price Prediction App",
+    description="Enter housing details to predict the median value of a home in $1000s (Boston Housing Dataset)."
+)
+
+interface.launch()

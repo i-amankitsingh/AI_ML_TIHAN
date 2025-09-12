@@ -1,0 +1,59 @@
+Pre-Class Notes
+Data Collection & Pre-processing
+1. Why This Matters
+ML models are only as good as the data.
+Data problems (missing, noisy, inconsistent) → weak predictions.
+Pre-processing ensures data is reliable, usable, and meaningful.
+2. Data Collection Sources
+Surveys → Direct responses from users/customers.
+Pros: Customized, targeted.
+Cons: Bias, missing responses.
+APIs → Pull real-time data (e.g., Twitter API, weather API).
+Pros: Automated, scalable.
+Cons: Rate limits, authentication issues.
+Sensors/IoT Devices → Continuous data (e.g., temperature, GPS, biometric).
+Pros: Real-time, high volume.
+Cons: Noisy signals, hardware errors.
+Databases/Logs → Existing organizational data.
+Pros: Already structured.
+Cons: May contain legacy errors, duplication.
+3. Challenges in Raw Data
+Noisy Data: Random errors or irrelevant values.
+Example: Sensor records "9999" for temperature.
+Inconsistent Data: Conflicting formats or entries.
+Example: "India" vs "IN" vs "Bharat".
+Missing Data: Nulls, skipped survey answers.
+Duplicate Records: Same entry stored multiple times.
+4. Pre-processing Techniques
+(A) Cleaning Noisy Data
+Smoothing: Moving averages for sensor data.
+Binning: Group values into ranges.
+Clipping: Limit extreme values.
+(B) Handling Missing Data
+Drop rows/columns (if too many nulls).
+Imputation: Fill with mean/median/mode.
+Advanced: Predict missing values using ML models.
+(C) Resolving Inconsistencies
+Standardize units (e.g., km → miles).
+Normalize text labels (e.g., "Male"/"M").
+Use reference dictionaries (e.g., ISO country codes).
+(D) Deduplication
+Identify duplicate IDs, keep first valid entry.
+Merge partial duplicates (e.g., “Sofi A.” vs “Sofi Altamsh”).
+5. Practical Example
+Case: Bank Customer Data
+
+Collected via survey + transaction logs.
+Issues:
+Missing age values.
+Duplicate entries (same CustomerId).
+Noisy salary data (values like -999).
+Fix:
+Fill missing ages with median age.
+Remove duplicates by CustomerId.
+Replace -999 with mean salary of similar customers.
+6. Key Takeaways
+Good data = good models.
+Design collection sources carefully (surveys, APIs, sensors).
+Pre-processing = cleaning, handling noise, fixing inconsistencies.
+Always document what changes you make for reproducibility.

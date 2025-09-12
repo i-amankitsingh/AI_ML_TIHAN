@@ -1,0 +1,73 @@
+Notes – Feature Extraction & Transformation (with Imbalance Handling)
+1. Dataset & Pre-processing
+Dataset: Bank Churn Modeling (14 features, target = Exited).
+Class imbalance: ~80% stayed, ~20% exited.
+Steps:
+Drop irrelevant cols: RowNumber, CustomerId, Surname.
+Encode categoricals (get_dummies).
+Split into X (features) & Y (target).
+Key point: Class imbalance makes this dataset ideal for learning imbalance techniques.
+2. Handling Outliers → Windsorizing
+Caps extreme values at boundaries (e.g., 1st & 99th percentiles).
+Example cols: CreditScore, Balance, EstimatedSalary.
+Benefit: smooths outliers without removing rows.
+Tool: scipy (customizable limits).
+3. Robust Scaling
+Standard scaling affected by outliers.
+
+Robust scaling formula:x′=IQRx−median
+
+x′=x−medianIQRx' = \frac{x - \text{median}}{\text{IQR}}
+
+Works well for skewed data or outliers (e.g., account balance).
+
+Makes features less sensitive to extremes → better for models.
+
+4. Class Imbalance Problem
+Minority class (Exited = 1) harder to predict.
+Accuracy can be misleading (naïve model = 80% accurate).
+Better metrics: Precision, Recall, F1-score.
+Goal: train models that balance both classes fairly.
+5. Handling Imbalance
+(A) Under-sampling
+Reduce majority samples.
+Methods:
+Random Under-sampling – simple removal.
+Tomek Links – remove majority samples overlapping with minority.
+ENN – remove noisy/borderline samples.
+Effect: Improves recall but lowers precision (more false positives).
+(B) Over-sampling
+Increase minority samples.
+Methods:
+Random Over-sampling – duplicate samples.
+SMOTE – synthetic samples via interpolation.
+Borderline-SMOTE – focus on decision boundary areas.
+Effect: Improves recall, may lower precision (false positives).
+Note: SMOTE/Borderline-SMOTE better than duplication but can add noise.
+6. Evaluation & Insights
+Baseline logistic regression = poor recall.
+Under-sampling: recall ↑, precision ↓.
+Over-sampling: recall ↑, precision may ↓.
+Trade-off: Choose based on problem context.
+Most used: Random Under-sampling + SMOTE.
+7. Quick Method Comparison
+Technique	Pros	Cons	Use Case
+Windsorizing	Smooths outliers	May distort data if cut wrong	Outlier preprocessing
+Robust Scaling	Not affected by outliers	Less effective if normal dist	Feature scaling
+Random Under-sample	Simple, quick	Info loss in majority class	Balanced training
+Tomek Links	Removes overlap	May not help much	Borderline cleaning
+ENN	Removes noise	May drop minority samples	Specialized cleaning
+Random Over-sample	Easy	Risk of overfitting	Small minority datasets
+SMOTE	Creates realistic samples	May add noise	Popular choice
+Borderline-SMOTE	Focus on decision boundary	Precision drop	Minority near boundary
+8. Key Takeaways
+Outliers: Fix with Windsorizing + Robust Scaling.
+Imbalance: Fix with Under-sampling (remove) or Over-sampling (add).
+Always check precision–recall trade-off.
+In practice: SMOTE + careful evaluation metrics often best.
+👉 Checkpoint for Students:
+
+If 80% of customers stay & 20% exit:
+
+Why is accuracy alone a poor measure?
+Which method (under-sampling or over-sampling) would you try first, and why?

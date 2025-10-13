@@ -1,0 +1,168 @@
+Technical Notes — Dimensionality Reduction & Linearity
+Prerequisites: Basics of regression/classification in ML, high school algebra (linear equations).
+
+1) Definition
+Dimensionality reduction is the process of reducing the number of input features while preserving most of the useful information.
+Linearity vs Non-linearity describes whether the relationship between input and output follows a straight line (linear) or curved/polynomial patterns (non-linear).
+
+2) Why it matters
+Too many features → slow computation (curse of dimensionality).
+
+Real-time applications need speed + accuracy, not just accuracy.
+
+Wrong model choice (linear on non-linear data) → misclassification and poor performance.
+
+3) Core concepts
+Curse of Dimensionality: More features = higher cost, latency.
+
+PCA: Reduces features using linear transformation.
+
+Linearity: y = mx + c (straight line).
+
+Non-linearity: y = x², x³ (curves, complex patterns).
+
+Skewness: Measure of data asymmetry; high skew = non-linear.
+
+4) When & why to use
+If data has many correlated features, use PCA to reduce dimensions → faster inference.
+
+If data is highly non-linear, avoid logistic regression because it underfits.
+
+If real-time speed is critical, reduce dimensions and/or pick efficient models.
+
+5) How-to / Steps
+Check feature count – large number → candidate for reduction.
+
+Check distribution – use .skew() or histograms to detect non-linearity.
+
+Apply PCA (linear) if reduction is needed.
+
+Choose model: linear regression/logistic for linear data; decision trees, SVM, NN for non-linear.
+
+Evaluate accuracy + latency together.
+
+6) Examples
+# PCA with Logistic Regression
+from sklearn.decomposition import PCA
+from sklearn.linear_model import LogisticRegression
+
+# Fit PCA
+pca = PCA(n_components=15)
+X_train_pca = pca.fit_transform(X_train)
+
+# Fit Logistic Regression
+model = LogisticRegression()
+model.fit(X_train_pca, y_train)
+Variant
+# Skewness check
+train.skew()
+
+# If skewness > 1 or < -1 → data is highly non-linear
+7) Real-world analogy
+Choosing the right model is like a tailor fitting clothes: wrong fit = uncomfortable (underfit/overfit), right fit = perfect prediction.
+
+8) Common pitfalls & fixes
+Pitfall	What happens	Fix
+Using all features blindly	Slow inference, latency	Apply PCA or feature selection
+Applying linear models on non-linear data	Misclassifications	Use trees, SVM, NN
+Relying only on accuracy	Good accuracy but too slow	Evaluate latency too
+9) Check yourself
+What is the curse of dimensionality?
+
+Why can PCA hurt performance on non-linear data?
+
+Which models handle non-linearities better than logistic regression?
+
+Answers:
+
+Too many features increase computational cost and latency.
+
+PCA forces linear transformation, losing complex patterns.
+
+Decision Trees, Random Forests, Boosting, SVM, Neural Networks.
+
+10) Practice task
+Take the make_moons dataset from sklearn. Fit logistic regression and decision tree classifiers. Compare accuracy.
+
+Hint/Outline:
+
+Import make_moons, generate dataset.
+
+Train logistic regression.
+
+Train decision tree.
+
+Compare decision boundaries.
+
+11) TL;DR
+More features = curse of dimensionality → slower inference.
+
+PCA reduces features but may distort non-linear data.
+
+Choose models that match data: linear for simple, trees/NN for complex.
+
+
+
+
+
+Lecture Summary
+
+Overview
+This lecture comprised two primary parts: first, a detailed discussion on concepts related to linearity and non-linearity in machine learning, including practical challenges such as dimensionality reduction and model fitting; second, a thorough briefing on the upcoming evaluation for the course, covering exam schedule, pattern, and guidelines.
+
+Dimensionality Reduction and Curse of Dimensionality
+Need for Dimensionality Reduction:
+High-dimensional data can improve prediction accuracy but also increases computational cost and latency. This creates what is known as the curse of dimensionality — where more features can slow down the model inference despite improving accuracy.
+Batch vs Real-time Inference:
+Critical applications like driver alertness detection require fast (real-time) inference, making dimensionality reduction necessary to reduce latency without compromising accuracy drastically.
+PCA Application:
+Principal Component Analysis (PCA) was demonstrated to reduce features (e.g., from 30 to 15) and cut model runtime drastically (from 15 seconds to under 1 second) while maintaining similar accuracy (~70%).
+Model Preservation with Pickle:
+Pickle is used to save the entire model pipeline (scaling, PCA, regression) for later use, similar to preserving food for future consumption. It packages multiple steps into one object.
+Linearity vs Non-Linearity in Machine Learning
+Definition of Linearity:
+Linear functions like y = x produce straight lines that predict outcomes in a simple, predictable manner. In contrast, polynomial functions like y = x^2, y = x^3, etc., are non-linear and produce curves with varying complexity.
+Importance in Modeling:
+Linear models like logistic regression work well on linear or near-linear data but struggle with non-linear distributions, leading to underfitting and misclassifications.
+Real-world problems, such as loan approvals or driver alertness, often involve complex, non-linear relationships due to multiple hidden variables or sudden changes.
+Visualization and Skewness:
+Skewness measures data symmetry; values near zero indicate linearity, while values greater than ±1 suggest strong non-linearity. Visualization tools like kernel density estimates (KDE) help identify the data distribution and non-linearity.
+Handling Non-Linear Data:
+PCA applies linear transformations, which may dilute non-linear features, similar to forcing a square peg into a round hole.
+To better handle non-linearity, models such as Decision Trees, Random Forests, Boosting techniques (Gradient Boosting, AdaBoost, XGBoost), K-Nearest Neighbors (KNN), Support Vector Machines (SVM), and Neural Networks (ANN) are preferable.
+Neural networks are particularly suited for complex non-linear data but may be an overkill (leading to overfitting) for simpler linear problems.
+Fitting Analogy:
+Model fitting is compared to tailoring clothes: a good tailor fits well for all sizes. A linear model is like a tailor that only makes medium size clothes — inadequate for diverse non-linear data shapes.
+Model Evaluation and Hyperparameter Tuning
+Overfitting and Underfitting:
+Underfitting happens when a linear model is forced onto non-linear data.
+Overfitting will be discussed in later sessions.
+Hyperparameters:
+Hyperparameters allow tuning models to fit data distributions better, akin to modifying a stock vehicle into a race car, enabling models to manage complex shapes effectively.
+Practical Advice for Machine Learning Practice
+Perform exploratory data analysis (EDA) to understand data linearity/non-linearity before selecting models.
+Avoid memorizing code syntax; focus on understanding concepts and building problem-solving approaches. Use tools like documentation, GitHub Copilot, or GPT for code assistance.
+Evaluation Session Details
+Schedule and Timing:
+Evaluation 1 is scheduled on 28th September (Sunday), 90 minutes long (8:00 PM to 9:30 PM), conducted online through LMS. A second attempt is available on 5th October, with the best score considered.
+Exam Format:
+60 questions in total.
+50% MCQs (30 questions), 25% Multiple correct MCQs (15 questions), and 25% Numerical Answer Type (15 questions).
+No partial credit for multiple answer questions; full accuracy required for marks.
+Marking scheme: +4 for correct, -1 for wrong, no negative for skipped questions.
+System Requirements:
+Use a laptop/desktop with an updated Google Chrome browser.
+Use two devices for proctoring: one computer with a front camera and a smartphone with a front camera for side views.
+Good internet connection and power backup recommended.
+Conduct Rules:
+Plagiarism and unethical behavior strictly prohibited.
+AI tools, online compilers, and calculators are not allowed; pen, paper, and standard calculators are permitted.
+Quiet, well-lit environment required during the exam.
+Support and Preparation:
+Mock evaluation available from 21st September for practice and system check.
+Help desk support via Zoom link on exam day for technical issues (not academic doubts).
+No coding questions expected in this first evaluation; possible revisions and doubt sessions planned.
+Results:
+Results will be released within 48 hours on LMS, graded on a scale of 10.
+Communication
+All documents including slides, evaluation handbooks, and FAQs will be shared via email, WhatsApp community, and LMS announcements.

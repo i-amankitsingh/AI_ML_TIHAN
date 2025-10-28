@@ -1,0 +1,139 @@
+Lecture Notes: Regression Model Evaluation & Multiple Linear Regression
+🌟 1. What Is Regression?
+Regression is a method used when we want to predict numbers.
+
+It helps us find patterns between input factors (like hours studied) and outcomes (like marks scored).
+
+🧠 Think of it like saying:
+
+“If I know how much you study, sleep, and attend classes — can I guess your score?”
+
+It’s not about “yes” or “no” — it’s about how much or how many.
+
+🪜 2. From Simple to Multiple Regression
+🔹 Simple Regression
+When there’s one input and one output, we call it simple regression.
+
+Example: Predicting a person’s weight based only on their height.
+
+But in real life, outcomes depend on many things, not just one.
+
+🔹 Multiple Regression
+When there are many input factors, it becomes Multiple Linear Regression (MLR).
+
+Example:
+
+Predicting car mileage (km/l) depends on:
+
+Engine size
+Car weight
+Fuel type
+Number of gears
+Air conditioning (yes/no)
+Each of these features contributes differently.
+
+MLR helps combine them all to give one best possible prediction.
+
+🚀 3. Why Multiple Regression Is Useful
+Multiple regression gives a complete picture.
+
+Let’s say you’re trying to predict a student’s performance.
+
+Depending only on study hours may not be enough — you also need:
+
+Sleep hours
+Attendance
+Number of assignments completed
+Each factor tells a small part of the story.
+
+Together, they help you predict more accurately.
+
+That’s why MLR is widely used in:
+
+Marketing → predicting sales based on price, ads, and discounts
+Healthcare → predicting blood pressure using age, weight, and activity
+Finance → predicting loan defaults based on income and credit score
+⚖️ 4. Checking How Good the Model Is
+After building a regression model, we must ask:
+
+👉 “Is my model actually good at predicting?”
+
+We measure this using evaluation metrics.
+
+Here’s how to think of them in simple terms:
+
+🧾 Mean Absolute Error (MAE)
+Imagine you guessed everyone’s marks and compared them with the real ones.
+
+MAE tells you, on average, how far your guesses were from reality.
+
+Smaller MAE → better model.
+
+🔍 Mean Squared Error (MSE)
+This one is like MAE but gives extra punishment for big mistakes.
+
+It’s helpful when large errors are costly — like predicting hospital bills.
+
+🎯 Root Mean Squared Error (RMSE)
+Think of it as a “standard mistake size” your model makes.
+
+It’s in the same units as the target (e.g., rupees, kilometers, etc.),
+
+so it’s easier to explain to non-technical people.
+
+📈 R-squared (R²)
+This tells you how much of the outcome your model explains.
+
+If R² = 0.9, it means your model explains 90% of what’s going on — pretty good!
+
+If R² is low, the model is missing some key factors.
+
+⚙️ Adjusted R-squared
+When you add more variables, R² always increases —
+
+even if those variables don’t help.
+
+Adjusted R² fixes that by growing only when the new variable truly adds value.
+
+🧠 5. A Quick Scenario
+Imagine you’re a restaurant owner trying to predict monthly sales.
+
+You consider:
+
+Number of ads posted
+Average food price
+Customer reviews
+Weather condition (sunny or rainy)
+After training your regression model, you check how close the predicted sales are to actual sales.
+
+If your predictions are mostly close — small average error, high R² —
+
+your model is doing a great job!
+
+If your predictions are often way off, or your R² is low —
+
+the model may need better features, more data, or simpler relationships.
+
+🪞 6. Common Issues in Regression
+🚧 Overfitting
+Your model fits the training data too well — like memorizing answers instead of learning concepts.
+
+It works perfectly on old data but performs poorly on new data.
+
+You can spot it when training accuracy is high but test accuracy is low.
+
+🪫 Underfitting
+Your model is too simple — it misses key relationships.
+
+This happens when you ignore important variables or use a weak model.
+
+Both training and test accuracy will be low.
+
+✅ Goal: A balanced model that performs well on both training and unseen data.
+
+🔍 7. How to Improve Regression Models
+Remove unnecessary features that add noise.
+Standardize or scale numeric values so that all features have equal impact.
+Check for correlated inputs — if two features are almost the same, drop one.
+Use cross-validation — test your model on small unseen parts of data before finalizing.
+Collect better data — sometimes the issue is not the model but poor data quality.

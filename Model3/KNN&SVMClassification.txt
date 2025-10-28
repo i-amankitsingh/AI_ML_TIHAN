@@ -1,0 +1,193 @@
+Lecture Notes: k-NN & SVM Classification
+1. Introduction
+When we work on classification problems in Machine Learning — like predicting if an email is spam or not spam, or if a tumor is benign or malignant — we often use supervised learning algorithms.
+
+Two popular algorithms for such problems are:
+
+k-Nearest Neighbors (k-NN)
+Support Vector Machines (SVM)
+Both are powerful yet conceptually very different.
+
+Let’s explore them step by step in simple terms.
+
+2. Understanding k-Nearest Neighbors (k-NN)
+2.1 What is k-NN?
+k-NN stands for k-Nearest Neighbors.
+
+It’s a lazy learning algorithm — meaning it doesn’t learn an explicit model during training.
+
+Instead, it stores the data and uses it at the time of prediction.
+
+In simple words:
+
+“To classify a new data point, k-NN looks at its ‘k’ nearest data points (neighbors) and assigns the majority class among them.”
+
+2.2 Example
+Imagine you have a dataset of fruits:
+
+Apples (Red, Round)
+Bananas (Yellow, Long)
+Now, you get a new fruit that’s Yellow and slightly curved.
+
+k-NN checks the k nearest fruits in your dataset based on similarity (distance).
+
+If most of those neighbors are Bananas, it classifies this new fruit as a Banana.
+
+2.3 How does it work?
+Steps in k-NN:
+
+Choose the value of k (number of neighbors to check).
+Calculate the distance between the new point and all training points.
+Select the k nearest neighbors.
+Check which class is most common among those neighbors.
+Assign that class to the new point.
+3. Distance Metrics in k-NN
+Since k-NN relies on distance to find neighbors, choosing the right distance metric is crucial.
+
+Commonly used distance measures:
+
+Euclidean Distance
+The straight-line distance between two points.
+
+Formula:d=(x1−y1)2+(x2−y2)2
+
+d=(x1−y1)2+(x2−y2)2d = \sqrt{(x_1 - y_1)^2 + (x_2 - y_2)^2}
+
+Example: Distance between (2, 3) and (5, 7) = √((5−2)² + (7−3)²) = √25 = 5.
+
+Manhattan Distance
+Distance along axes (like walking in city blocks).
+
+Formula:d=∣x1−y1∣+∣x2−y2∣
+
+d=∣x1−y1∣+∣x2−y2∣d = |x_1 - y_1| + |x_2 - y_2|
+
+Example: Distance between (2, 3) and (5, 7) = |5−2| + |7−3| = 7.
+
+Minkowski Distance
+A generalized form that can act like Euclidean or Manhattan based on a parameter ‘p’.
+Cosine Similarity
+Measures how similar two vectors are, based on the angle between them.
+Often used in text classification.
+4. Choosing the Right ‘k’
+Choosing k is important — it can affect your model’s accuracy.
+
+If k = 1:
+
+Only the nearest neighbor decides the class → can be noisy (high variance).
+
+If k is too large:
+
+It might include too many distant points from other classes → blurry boundaries (high bias).
+
+💡 Tip:
+
+Start with small odd values (like 3, 5, 7) and test using cross-validation to find the best k.
+
+4.1 Example
+Let’s say we are classifying emails:
+
+6 spam emails
+4 non-spam emails
+If k = 3 and 2 of the nearest neighbors are spam → classify as spam.
+
+If k = 7 and 5 are non-spam → classify as non-spam.
+
+Thus, k affects how “sensitive” the algorithm is to local vs. overall data.
+
+5. Pros and Cons of k-NN
+✅ Advantages
+
+Simple and intuitive.
+No training time (only prediction time).
+Works well for smaller datasets.
+❌ Disadvantages
+
+Slow for large datasets (needs to check all distances).
+Sensitive to irrelevant features or scaling — feature normalization is important.
+Doesn’t perform well when dimensions are very high.
+6. Understanding Support Vector Machines (SVM)
+6.1 What is SVM?
+Support Vector Machine (SVM) is a supervised learning algorithm used for classification and regression tasks.
+
+It aims to find a decision boundary (or hyperplane) that best separates the data into different classes.
+
+6.2 Concept in Simple Words
+Imagine you have two classes of points (red and blue).
+
+You can draw many possible lines (in 2D) that separate them, but SVM finds the best line — one that maximizes the margin (distance between the line and the nearest data points of each class).
+
+These nearest points are called Support Vectors — they “support” the boundary.
+
+6.3 Example
+Suppose we have:
+
+Red dots = Students who failed
+Blue dots = Students who passed
+SVM tries to draw a line that cleanly separates the two groups with maximum distance from both.
+
+If data can’t be separated by a straight line, SVM uses a kernel trick to project it into a higher dimension where separation becomes possible.
+
+7. SVM Hyperplanes and Margins
+A hyperplane is simply a boundary:
+
+In 2D → it’s a line
+In 3D → it’s a plane
+In higher dimensions → it’s a hyperplane
+The goal of SVM is to find the hyperplane that:
+
+Correctly separates classes
+Maximizes the margin between them
+The margin helps the model generalize better and avoid overfitting.
+
+8. Kernels in SVM
+Not all data can be separated by a straight line. That’s where kernels come in.
+
+Kernels help SVM handle non-linear data by transforming it into a higher-dimensional space.
+
+Common Kernels:
+Linear Kernel
+Used when data is linearly separable.
+Example: Text classification.
+Polynomial Kernel
+Adds polynomial terms to create curved boundaries.
+Example: Classifying data shaped like a circle.
+RBF (Radial Basis Function) Kernel
+Creates circular decision boundaries.
+Very popular and works for most cases.
+8.1 Example
+Imagine separating two sets of points arranged in a circle — red inside, blue outside.
+
+A straight line can’t do it.
+
+But RBF kernel maps this data to a higher space where SVM can draw a clear boundary.
+
+9. Comparing k-NN and SVM
+Feature	k-NN	SVM
+Learning Type	Lazy (no model built)	Eager (builds a model)
+Decision Boundary	Non-parametric, depends on neighbors	Fixed boundary using margin
+Sensitive to Outliers	Yes	Less sensitive
+Works Better On	Small datasets	Large, complex datasets
+Speed	Slow at prediction	Faster at prediction
+10. Key Takeaways
+k-NN classifies based on similarity with nearby points.
+SVM separates classes using the best possible boundary.
+Distance metrics like Euclidean and Manhattan play a major role in k-NN.
+Choosing k wisely improves accuracy.
+SVM kernels allow handling both linear and non-linear data.
+Both are strong baseline models for classification problems.
+11. Mini Demo Idea
+Demo 1: k-NN Classification
+
+Use the Iris dataset
+Choose k = 3
+Plot the decision boundary using different distance metrics
+Demo 2: SVM Classification
+
+Use the same Iris dataset
+Try Linear and RBF kernels
+Visualize how the boundary changes
+Activity Checkpoint 🧠
+What happens if you choose a very small k in k-NN?
+What role do support vectors play in SVM?
+Which kernel would you use for non-linear data patterns?

@@ -1,0 +1,213 @@
+Industry Mentor – 17: Lecture Notes
+Prerequisites: Python fundamentals (NumPy or pandas), vector arithmetic (dot products, norms), ability to plot with Matplotlib or Seaborn, and a basic grasp of supervised vs. unsupervised learning.
+
+Learning outcomes:
+
+Build and train a perceptron classifier from scratch and evaluate it on a synthetic dataset.
+Explain how different activation functions shape gradients, saturation, and decision boundaries.
+Use K-Means to cluster unlabeled data, interpret inertia and silhouette scores, and justify the choice of k.
+Combine clustering outputs with a simple classifier to build an end-to-end exploratory pipeline.
+1. Session Kickoff: Where Linear Decisions Meet Unlabeled Structure
+Modern ML projects often start with unlabeled exploration before moving into supervised modeling. K-Means highlights structure in raw behavior, while perceptrons (and their activation functions) provide the first supervised baseline. Together they offer a fast path from messy data to actionable insight.
+
+Pain point solved: Jumping straight into deep networks without understanding the linear baseline or the data's natural groupings.
+Mental model: K-Means sketches the map; perceptrons draw the dividing line across that map; activation functions control how flexible the line becomes in deeper models.
+Live demo plan: We'll alternate between coding cells (NumPy + scikit-learn) and visual diagnostics to show how tweaks ripple through the workflow.
+Check Your Understanding
+Can you describe, in plain language, why segmenting data before classification might lead to better hypotheses?
+What question would you ask to confirm whether a perceptron is sufficient for a dataset?
+2. Building Perceptron Models Step by Step
+2.1 Intuition Before Implementation
+Inputs are multiplied by learned weights, summed, offset by a bias, then passed into an activation function.
+Training adjusts weights in the direction of the error for misclassified points--small nudges reduce the loss on future passes.
+Works best when a single straight-line boundary can separate the classes.
+Tip: Visualise the weighted sum as a projection of the data onto a line; the bias shifts where the threshold sits on that line.
+
+2.2 Mathematical Form
+For input vector x and weights w:
+
+net = dot(w, x) + b
+prediction = activation(net)
+w = w + eta * (y_true - prediction) * x
+b = b + eta * (y_true - prediction)
+Where:
+
+eta is the learning rate.
+Activation is often step(net) for a classic perceptron; modern variants plug in differentiable functions.
+Updates trigger only on mistakes when using the step activation.
+2.3 Implementation from Scratch
+import numpy as np
+from sklearn.datasets import make_classification
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import accuracy_score
+
+X, y = make_classification(
+    n_samples=400,
+    n_features=2,
+    n_informative=2,
+    n_redundant=0,
+    class_sep=1.2,
+    random_state=42,
+)
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.25, random_state=42)
+
+weights = np.zeros(X_train.shape[1])
+bias = 0.0
+learning_rate = 0.05
+
+def step(z):
+    return 1 if z >= 0 else 0
+
+for epoch in range(30):
+    for features, target in zip(X_train, y_train):
+        output = step(np.dot(features, weights) + bias)
+        error = target - output
+        if error != 0:
+            weights += learning_rate * error * features
+            bias += learning_rate * error
+
+pred_test = [step(np.dot(features, weights) + bias) for features in X_test]
+print("Test accuracy:", accuracy_score(y_test, pred_test))
+Key takeaways:
+
+Updates happen only on mistakes, so linearly separable data converges quickly.
+Learning rate controls the pace; start small (0.01-0.1) to avoid oscillations.
+Shuffle or randomise examples each epoch to avoid cyclical mistakes on challenging points.
+2.4 Diagnosing and Improving Training
+No convergence: Data may be non-linearly separable--consider feature engineering or switching to logistic regression or a multi-layer perceptron.
+Stalled learning: Decrease learning rate slowly, add more epochs, or rescale features.
+Overfitting concerns: Even though perceptrons are low-capacity, noisy features can harm them; add regularisation or feature selection.
+Edge cases: Highly imbalanced data can bias the decision boundary--balance classes or adjust learning rates per class.
+Caution: Because the classic perceptron uses a non-differentiable step function, it cannot be optimised with gradient descent--backpropagation requires smooth activations.
+
+Check Your Understanding
+What would you inspect first if accuracy refuses to improve after several epochs?
+How does adding a bias term change the shape or position of the decision boundary?
+3. Experimenting with Activation Functions
+3.1 Why Activation Functions Matter
+They introduce the non-linearity that lets stacked layers approximate complex functions.
+Activations moderate gradient flow--some saturate (sigmoid, tanh), others keep gradients alive (ReLU, GELU).
+Choosing the right activation affects convergence speed, expressiveness, and numerical stability.
+3.2 Comparing Common Activation Functions
+Function	Output range	Derivative snapshot	Typical uses	Watch out for
+Step	{0, 1}	0 almost everywhere	Classic perceptron decisions	No gradient for learning deep networks
+Sigmoid	(0, 1)	Small when |z| is large	Binary outputs, probabilistic interpretation	Vanishing gradients, not zero-centered
+Tanh	(-1, 1)	Peaks near 0, shrinks at extremes	Hidden layers in smaller networks	Still saturates, expensive exp computations
+ReLU	[0, infinity)	1 for z>0, 0 otherwise	Default hidden-layer choice	"Dead" neurons when weights push z<0 forever
+Leaky ReLU	(-infinity, infinity)	Small slope for z<0	Avoids dead ReLU, simple drop-in	Pick slope carefully (0.01 common)
+3.3 Mini Experiment: Visualising Activation Behaviour
+import numpy as np
+import matplotlib.pyplot as plt
+
+z = np.linspace(-4, 4, 200)
+sigmoid = 1 / (1 + np.exp(-z))
+tanh = np.tanh(z)
+relu = np.maximum(0, z)
+leaky_relu = np.where(z > 0, z, 0.05 * z)
+
+plt.figure(figsize=(8, 5))
+plt.plot(z, sigmoid, label="Sigmoid")
+plt.plot(z, tanh, label="Tanh")
+plt.plot(z, relu, label="ReLU")
+plt.plot(z, leaky_relu, label="Leaky ReLU (alpha=0.05)")
+plt.axhline(0, color="gray", linewidth=0.5)
+plt.axvline(0, color="gray", linewidth=0.5)
+plt.title("Activation Function Shapes")
+plt.legend()
+plt.show()
+Discussion prompts:
+
+Note how sigmoid and tanh flatten at the extremes--gradients shrink, slowing learning.
+ReLU keeps strong gradients for positive inputs but zeroes negatives; leaky ReLU mitigates dead zones.
+Zero-centred outputs (tanh, leaky ReLU) can yield faster convergence because gradients are not biased.
+3.4 Patterns and Pitfalls to Watch
+Activations and weight init: Pair ReLU with He initialization, sigmoid or tanh with Xavier or Glorot.
+Experimental mindset: When you swap activations, log metrics (loss, accuracy) and gradients to understand behaviour--not just final accuracy.
+Numeric stability: Avoid raw sigmoid on large positive or negative inputs without clipping to prevent overflow.
+Output layer choices: Use sigmoid for binary probabilities, softmax for multi-class, linear for regression.
+Remember: Try one change at a time. When an experiment fails, knowing which activation moved the needle is more valuable than random tweaking.
+
+Check Your Understanding
+Which activation would you test first for a model that must output both positive and negative scores, and why?
+How would you detect and respond to "dead" ReLU neurons during training?
+4. Clustering with K-Means
+4.1 Intuition and Algorithm
+Goal: Partition n observations into k clusters where each observation belongs to the cluster with the nearest mean.
+Loop: Initialise k centroids -> assign points to closest centroid -> recompute centroids -> repeat until assignments stabilise.
+Distance metric: Default is Euclidean--feature scaling dramatically influences results.
+When it shines: Compact, roughly spherical clusters with similar variance.
+4.2 Implementation Walkthrough
+from sklearn.cluster import KMeans
+from sklearn.preprocessing import StandardScaler
+from sklearn.metrics import silhouette_score
+
+scaler = StandardScaler()
+X_scaled = scaler.fit_transform(X)  # reuse X from earlier or load fresh data
+
+model = KMeans(n_clusters=3, init="k-means++", n_init="auto", random_state=42)
+labels = model.fit_predict(X_scaled)
+
+print("Inertia:", model.inertia_)
+print("Silhouette:", silhouette_score(X_scaled, labels))
+print("Centroids (scaled space):\n", model.cluster_centers_)
+Interpretation checklist:
+
+Inertia: Sum of squared distances to centroids--lower is better but always decreases with larger k.
+Silhouette score: Between -1 and 1; above 0.5 generally indicates good separation.
+Centroids: Inspect feature contributions to label clusters meaningfully.
+4.3 Choosing the Right k
+Elbow method: Plot inertia vs. k and look for diminishing returns.
+Silhouette analysis: Pick k that maximises silhouette; show the full silhouette plot to reveal skewed clusters.
+Business constraints: Sometimes k is dictated by operational limits (for example, how many marketing personas the team can action).
+Cross-validation idea: Split data, run clustering separately, and compare how stable cluster assignments remain.
+4.4 Troubleshooting Clusters
+Dominant scale: Standardise or normalise features to avoid one dimension dominating.
+Non-spherical structure: Consider DBSCAN or Gaussian Mixture Models if clusters look crescent-shaped.
+Empty clusters: Re-run with different seeds or reduce k; empties often signal too many clusters.
+Interpretation gaps: Profile clusters with summary stats and plots (box plots, radar charts) before presenting.
+Caution: K-Means assumes equal importance for each feature. If your features differ in scale for a meaningful reason, rescaling might distort the story--consult stakeholders before normalising everything.
+
+Check Your Understanding
+What evidence would convince you that your chosen k is too high?
+How could you reuse K-Means results to accelerate supervised modeling?
+5. Putting It Together: Feature Pipelines
+Workflow idea: Use K-Means to create cluster labels or distances, append them as features, and train a perceptron to flag anomalies within each cluster.
+Example: Segment customers into spending patterns, then train a perceptron to classify high-risk behaviour inside each segment.
+Activation experiments: Test different activations in a shallow neural network built on top of cluster-informed features to see whether curves (sigmoid vs. ReLU) change separation quality.
+Feedback loop: Clustering insights can guide which engineered features to feed into the perceptron (for example, cluster distance ratios).
+6. Practice Lab (15-20 Minutes Each)
+Task A: Linearly Separable or Not?
+
+Generate two datasets with make_classification: one with class_sep=1.5, another with class_sep=0.4.
+Train the scratch perceptron from Section 2 on both.
+Plot decision boundaries and report accuracy.
+Deliverables: Notebook or script with code, plots, and a short analysis explaining why performance differs.
+Success criteria: Accuracy >= 0.9 on the separable set, thoughtful explanation of failure modes on the harder set.
+Solution sketch: Emphasise visualisation (scatter plot + line), highlight misclassified points, and relate them to linear separability.
+
+Task B: Activation A/B Test
+
+Use sklearn.neural_network.MLPClassifier on make_moons data.
+Train two runs: hidden_layer_sizes=(20, 20) with activation="relu" and activation="tanh".
+Record training loss curves and final accuracy.
+Deliverables: Training log or plot, metric table comparing activations, brief takeaway.
+Success criteria: Code runs without warnings, loss curves are annotated, and takeaway mentions gradient behaviour or convergence speed.
+Solution sketch: Normalise inputs, enable max_iter=500, and collect loss_curve_. Provide a short paragraph on which activation converged faster and why.
+
+7. Common Pitfalls and Rescue Moves
+Skipping scaling before K-Means: Always inspect feature ranges; use StandardScaler as a default baseline.
+One-off activation swaps: Change activation without adjusting learning rate or initialization leads to misinterpreted results--tune as a bundle.
+Ignoring bias updates: Forgetting the bias term yields a boundary pinned to the origin; double-check update loops.
+Misreading silhouette scores: A high average can hide clusters of vastly different densities--plot per-cluster silhouettes.
+Remember: Document each experiment (activation choice, k, initialization) in a table. Clear notes speed up debugging and reproducibility.
+
+8. Recap and Next Steps
+Perceptrons give you a transparent, debuggable baseline for binary classification.
+Activation functions control how information and gradients flow--experiment carefully and record observations.
+K-Means reveals structure without labels, but the story is complete only after validating clusters.
+Combining these tools lets you explore raw data, build hypotheses, and iterate quickly toward more complex models.
+Next explorations:
+
+Try kernelised methods or neural networks with hidden layers for non-linear boundaries.
+Evaluate cluster stability via bootstrapping or adjusted Rand index.
+Integrate dimensionality reduction (PCA, t-SNE) before clustering to improve interpretability.

@@ -1,0 +1,117 @@
+Training & Improving Neural Networks - Lecture Notes
+Prerequisites: Basic calculus for gradients (chain rule), ability to implement a two-layer network in PyTorch or TensorFlow, and familiarity with train/validation splits.
+
+Learning outcomes
+
+Diagnose training runs by interpreting loss and metric curves and relating them to underfitting, overfitting, or optimization instability.
+Configure optimizers, learning rate schedules, and batch sizes to control convergence speed without sacrificing stability.
+Apply regularization techniques—weight decay, dropout, augmentation, and early stopping—to improve generalization and document their impact.
+1. Understand the Training Loop as a Feedback System
+At its core, training repeatedly applies four steps: forward pass, loss computation, backward pass, and parameter updates. Each loop turns prediction errors into gradient information that nudges the network toward lower loss.
+
+Tip: Draw the loop on paper: data batch -> forward -> loss -> backward -> optimizer.step(). Most bugs are easier to solve when you can point at the step that misbehaves.
+
+Step-by-step rhythm
+
+Sample a mini-batch from the training set.
+Run the forward pass to compute logits or predictions.
+Evaluate the loss function against ground truth.
+Call loss.backward() (PyTorch) or tape.gradient() (TensorFlow) to compute gradients.
+Let the optimizer update parameters with those gradients.
+Zero (or reset) gradients before the next batch so signals do not accumulate unexpectedly.
+Minimal training loop (PyTorch)
+model.train()
+for batch in train_loader:
+    inputs, targets = batch
+    optimizer.zero_grad()
+    logits = model(inputs)
+    loss = criterion(logits, targets)
+    loss.backward()
+    torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=2.0)
+    optimizer.step()
+Remember: Gradient clipping is cheap insurance against the occasional exploding gradient—add it before training a new architecture.
+
+Check your understanding
+Which step in the loop actually changes the weights?
+Why is optimizer.zero_grad() typically called before the forward pass?
+Suggested answers
+2. Learning Rate and Optimizer Behavior
+The learning rate is the most sensitive hyperparameter: too high and loss spikes, too low and training crawls. Optimizers decide how gradients get transformed into updates.
+
+Optimizer	Memory	Key hyperparameters	Best use cases
+SGD	None	lr, optional momentum	Baselines, when you want explicit control and predictable behavior
+SGD + Momentum	Velocity vector	lr, momentum=0.9	Smooths noisy gradients, common for vision models
+RMSProp	Running average of squared gradients	lr, alpha	Handles non-stationary objectives, RNNs
+Adam	First & second moment estimates	lr, betas=(0.9, 0.999)	Fast convergence on sparse or noisy gradients, default for many NLP tasks
+Caution: Adam can overfit silently if you never adjust weight decay or reduce the learning rate; schedule it down once validation loss stops improving.
+
+Learning rate schedules to know
+
+Step decay: Drop the rate by a factor every N epochs (e.g., gamma=0.1 every 30 epochs).
+Reduce on plateau: Monitor validation loss and lower the rate when it stalls.
+Cosine annealing: Smoothly decay the rate following a cosine curve, optionally with warm restarts.
+Warmup: Start with a tiny learning rate and ramp to the target during the first few epochs to stabilize very deep models.
+Check your understanding
+Why does momentum help when training with small batch sizes?
+When would you prefer ReduceLROnPlateau over a fixed step schedule?
+Suggested answers
+3. Batch Size, Gradient Health, and Scheduling
+Batch size governs the trade-off between noisy updates and throughput. Smaller batches give more gradient noise (which can help escape shallow minima) but require more iterations; larger batches stabilize gradients but need more memory.
+
+Batch size	Pros	Cons
+16–64	More noise, better generalization in some cases, lower memory footprint	Slower wall-clock time, noisier metrics
+128–512	Good default range for many GPUs	May need learning rate scaling
+1024+	Higher throughput on large accelerators	Risk of sharp minima; often needs warmup and gradient clipping
+Scheduler tips:
+
+Couple larger batch sizes with proportionally larger learning rates, but add warmup.
+Always log gradient norms (torch.nn.utils.clip_grad_norm_ returns them) to catch exploding gradients early.
+Consider gradient accumulation when hardware limits your batch size but you want the stability of a larger effective batch.
+Note: Gradient clipping thresholds around 1-5 for RNNs and 5-10 for transformers are common starting points—tune per architecture.
+
+Check your understanding
+How would you adjust the learning rate if you increase batch size from 64 to 256?
+What symptom tells you gradients might be vanishing?
+Suggested answers
+4. Regularization Techniques to Improve Generalization
+Regularization prevents the network from memorizing training data and keeps the learned function smoother.
+
+Weight decay (L2 regularization): Adds λ ||w||^2 to the loss; implement via optimizer parameter weight_decay.
+Dropout: Randomly zeros activations during training; remember to call model.eval() for evaluation to turn it off.
+Data augmentation: Synthetic variety (flips, crops, color jitter) helps models see more of the input space.
+Label smoothing: Softens targets (e.g., 0.9 for the true class, 0.1 distributed) to reduce overconfidence.
+Early stopping: Stops training after patience epochs without validation improvement and restores the best weights.
+Caution: Stacking strong regularizers (heavy dropout + high weight decay + aggressive augmentation) can underfit; add one control at a time and watch validation metrics.
+
+Worked example: Weight decay vs. dropout
+Train the same MLP on Fashion-MNIST with (weight_decay=1e-4, dropout=0.0).
+Repeat with (weight_decay=0, dropout=0.3).
+Compare validation accuracy and calibration (confidence vs. accuracy). Some datasets prefer weight decay; others benefit more from dropout.
+Check your understanding
+Why does data augmentation count as regularization?
+What simple metric tells you early stopping triggered at the right time?
+Suggested answers
+5. Monitoring, Diagnostics, and Recovery Plans
+Great training is proactive monitoring. Track loss, accuracy (or other relevant metrics), gradient norms, and learning rate at each epoch.
+
+Quick diagnostic checklist
+
+Diverging loss: Lower learning rate, check for exploding gradients, or inspect data preprocessing.
+High training + low validation loss: Underfitting—add capacity, reduce regularization, run longer.
+Low training loss + high validation loss: Overfitting—add regularization, augmentation, or early stopping.
+Accuracy spikes/drops: Inspect data shuffling, batch norm statistics, or label quality.
+Tip: Log metrics with timestamps and hyperparameters (e.g., using TensorBoard or Weights & Biases). It is easier to compare runs and justify decisions to teammates.
+
+Practice diagnostic questions
+Validation accuracy peaks early and then falls while training accuracy keeps rising—what do you change first?
+Loss oscillates wildly every few batches—what monitor do you add?
+Suggested answers
+Practice Task (15–20 minutes)
+Train two multilayer perceptrons on the sklearn.datasets.load_digits dataset:
+
+Split 70% train, 15% validation, 15% test with stratification.
+Model A: Use Adam with learning rate 1e-3, no regularization.
+Model B: Use the same architecture but add weight decay 1e-4, dropout 0.2, and ReduceLROnPlateau on validation loss.
+Plot training vs. validation loss for both runs and report the best validation accuracy.
+Explain, in 3-4 sentences, how the regularization affected convergence and generalization.
+Evaluation criteria: Code runs end-to-end, plots clearly labeled, and reflections reference evidence from the curves.

@@ -1,0 +1,145 @@
+Convolutional Neural Networks - Lecture Notes
+Prerequisites: Ability to read tensor shapes, understand matrix multiplication, and build/troubleshoot small neural networks in PyTorch or Keras.
+
+Learning outcomes
+
+Explain how convolution, stride, padding, and pooling change spatial dimensions and receptive fields throughout a network.
+Design a convolutional block that balances parameter count, computation, and feature richness for a given vision task.
+Implement and train a small CNN, monitor learning signals, and debug common failure modes using modern deep-learning tooling.
+1. Build the Mental Picture: Sliding Pattern Detectors
+A convolutional layer is a pattern detector that reuses the same tiny weight matrix everywhere in the image. Each time the filter slides to a new location, it multiplies the local patch, sums the weighted pixels, and emits a single activation describing "how much of that pattern lives here." Stacking dozens of filters creates a rich set of feature maps, each highlighting different edges, textures, or color transitions.
+
+💡 Key insight: Convolution trades dense connections for weight sharing. The network no longer memorizes absolute pixel positions; it cares about relative patterns that appear anywhere.
+
+How the pieces interact:
+
+Input tensor arrives as (batch, channels, height, width) (PyTorch) or (batch, height, width, channels) (Keras).
+Each kernel has the shape (out_channels, in_channels, kernel_height, kernel_width).
+The filter slides, computes weighted sums, and produces an activation grid per output channel.
+Non-linear activations (typically ReLU) keep the representation expressive before passing it to the next block.
+Check your understanding
+Why does sharing one kernel across the entire image help a CNN generalize to objects that appear in different positions?
+What happens to the number of parameters if you double the number of input channels but keep kernel size and output channels fixed?
+Suggested answers
+2. Anatomy of a Convolution Layer
+A single layer transforms spatial dimensions according to kernel size, stride, and padding.
+
+Component	Symbol	Effect
+Kernel size	k	Controls how big a patch the filter sees at once.
+Stride	s	Moves the kernel s pixels each step; larger stride shrinks the feature map.
+Padding	p	Adds p pixels around the input border so the filter can see edge pixels.
+Output size	O = ⌊(I - k + 2p)/s⌋ + 1	Computes the spatial dimension per axis.
+⚠️ Common misconception: Padding is not just cosmetic. Without it, each convolution erodes the borders and can destroy important edge information.
+
+Mini example: Torch convolution
+import torch
+import torch.nn as nn
+
+conv = nn.Conv2d(in_channels=3, out_channels=16, kernel_size=3, stride=1, padding=1)
+x = torch.randn(8, 3, 64, 64)  # batch of 8 RGB images
+
+out = conv(x)
+print(out.shape)  # -> torch.Size([8, 16, 64, 64])
+padding=1 preserves height and width, while 16 filters produce 16 feature maps. The bias term adds one parameter per output channel, bringing the total parameter count to 16 * (3 * 3 * 3 + 1) = 448.
+
+Check your understanding
+If you switch to stride=2 with the same kernel and padding, what output shape will you see?
+How many learnable parameters are added when you enable bias=False on the layer above?
+Suggested answers
+3. Managing Spatial Dimensions: Padding, Stride, Pooling
+Convolutional networks balance feature richness with feasibility by deliberately shrinking or preserving feature maps.
+
+Padding (p) preserves borders. "Same" padding in Keras automatically picks p so the output matches the input size when s = 1.
+Stride (s) downsamples by skipping locations. s = 2 reads every other patch, halving width and height.
+Pooling layers (max or average) summarise small windows without adding parameters. Max pooling keeps the strongest activation; average pooling keeps smooth representations.
+Operation	Typical window	Output shape impact
+MaxPool2d kernel=2, stride=2	2×2	Halves each spatial axis
+Global average pooling	entire map	Outputs (batch, channels)
+Strided convolution (stride=2)	usually 3×3	Learns weighted downsampling
+🎯 Real-World: Downsampling lets a model analyze a 4K dash-cam video on embedded hardware without exhausting memory.
+
+Check your understanding
+When might you prefer a strided convolution over a pooling layer for downsampling?
+What side effect can aggressive pooling introduce in fine-grained classification tasks?
+Suggested answers
+4. From Feature Maps to Predictions
+After several convolutional blocks, the network needs to convert spatial grids into class scores or regression outputs.
+
+Flattening reshapes (channels, height, width) into a single vector that a dense layer can read.
+Global pooling replaces flattening when you want fewer parameters and more translational robustness.
+Fully connected head maps the condensed representation to logits. Softmax or sigmoid turns logits into probabilities for classification.
+💡 Key insight: Choosing between flattening and global pooling is a capacity vs. generalization trade-off. Flattening keeps spatial detail but adds parameters; global pooling loses location info but rarely overfits as quickly.
+
+5. Training Pipeline: Data → Model → Metrics
+Step 1: Prepare the data
+
+Normalize pixel values (/255 or transforms.Normalize).
+Augment moderately (random flips, crops, color jitter) to teach invariances.
+Create train/validation splits to monitor generalization.
+Step 2: Assemble the architecture
+
+Stack 2–3 convolutional blocks (Conv → BatchNorm → ReLU → Pool).
+Double filters every other block for richer features, e.g., 32 → 64 → 128.
+Add dropout (0.2–0.5) near the classifier head if the dataset is small.
+Step 3: Train and monitor
+
+import torch
+from torch import nn, optim
+from torch.utils.data import DataLoader
+from torchvision import datasets, transforms
+
+transform = transforms.Compose([
+    transforms.RandomHorizontalFlip(),
+    transforms.ToTensor(),
+    transforms.Normalize(mean=(0.5,), std=(0.5,))
+])
+
+dataset = datasets.FashionMNIST(root="./data", train=True, download=True, transform=transform)
+train_loader = DataLoader(dataset, batch_size=128, shuffle=True)
+
+model = nn.Sequential(
+    nn.Conv2d(1, 32, 3, padding=1), nn.BatchNorm2d(32), nn.ReLU(),
+    nn.MaxPool2d(2),
+    nn.Conv2d(32, 64, 3, padding=1), nn.ReLU(),
+    nn.MaxPool2d(2),
+    nn.Flatten(),
+    nn.Linear(64 * 7 * 7, 128), nn.ReLU(),
+    nn.Dropout(0.3),
+    nn.Linear(128, 10)
+)
+
+criterion = nn.CrossEntropyLoss()
+optimizer = optim.Adam(model.parameters(), lr=1e-3)
+Log training and validation loss curves. Diverging curves often indicate overfitting.
+Track accuracy per class to reveal issues hidden in the aggregate metric.
+Step 4: Evaluate
+
+Use confusion matrices to spot systematic misclassifications.
+Inspect activation maps or Grad-CAM heatmaps to verify the model attends to relevant regions.
+Practice task (15–20 minutes)
+Build a CNN that classifies sign-language digits from the tensorflow_datasets sign_language_digits split.
+
+Data: Load via tfds.load("sign_language_digits"). Normalize to [0, 1] and apply random rotations within ±15°.
+Architecture: Two Conv2D + ReLU + MaxPool2D blocks, followed by global average pooling and a dense softmax layer.
+Deliverables:
+Training script/notebook with accuracy and loss plots.
+Table of per-class precision/recall.
+One Grad-CAM visualization showing which pixels drove a correct prediction.
+Hint: Start with 32 filters in the first block, double them in the second, and cap training at 10 epochs.
+6. Debugging & Common Pitfalls
+Symptom	Likely cause	Recovery path
+Training loss stuck around chance	Learning rate too low or model too shallow	Increase learning rate, add another conv block, verify labels.
+Validation loss worse than training loss from the start	Augmentations missing or dataset too small	Add augmentation, introduce dropout, use transfer learning.
+Exploding gradients in deeper CNNs	No normalization, aggressive learning rate	Insert batch normalization, reduce lr, use gradient clipping.
+Predictions ignore fine details	Too much pooling or stride	Reduce stride, replace max pooling with dilated convolutions or attention.
+⚠️ Watch out: CUDA memory errors often come from oversized batch sizes or forgetting to call model.eval() during evaluation, causing dropout to run.
+
+Check your understanding
+Why does batch normalization often stabilize CNN training on image data?
+What diagnostic would convince you to reduce augmentation rather than add more capacity?
+Suggested answers
+7. Summary & Next Steps
+Convolutions detect local patterns while keeping parameter counts manageable through weight sharing.
+Padding, stride, and pooling control the resolution/efficiency trade-off—tune them intentionally.
+Monitoring loss curves, per-class metrics, and activation visualizations reveals whether the network is learning robust features.
+Next up: explore advanced blocks (residual connections, dilations) and fine-tuning pretrained backbones for your custom datasets.

@@ -1,0 +1,103 @@
+# Evaluation 2 - Syllabus
+
+*Specialized Program in Artificial Intelligence & Machine Learning with Drone Tech, offered by TiHAN - IIT Hyderabad and Masai (Batch 1)*
+
+## Syllabus (End of Module 4)
+
+Evaluation 2 covers the key concepts from Modules 3 and 4 of the Specialized Program in Artificial Intelligence & Machine Learning with Drone Tech, offered by TiHAN - IIT Hyderabad and Masai. This assessment tests your understanding of AI and machine learning techniques applied to drone technology and prepares you for the next stage of the program. 
+
+Below is the attached syllabus for Evaluation 2 (End of Module 4)
+
+| S.No | Topic  | Key concepts |
+| --- | --- | --- |
+| 1 |  Linear Regression Fundamentals | • Least squares fit
+• Interpreting slope & intercept
+• Residual plots
+• QQ plots |
+| 2 | Multiple Linear Regression & Mastering Linear Regression. | • Multicollinearity
+• Categorical variablesx
+• Adjusted R²
+• Hands-on practice with multivariate datasets
+• Implementing simple and multiple linear regression
+• Interpreting coefficients and residual diagnostics |
+| 3 | Polynomial Regression & Complexity & Metrics | • Adding polynomial features
+• Bias vs variance
+• Visualizing fit curves
+• Applying polynomial regression
+• Evaluating models with MAE, MSE, RMSE, R² |
+| 4 |  Regression Model Evaluation | • MAE, MSE, RMSE, R²
+• Choosing the best model |
+| 5 | Cross-Validation & Generalization | • Performing k-fold CV; building end-to-end
+regression projects; analyzing model
+performance |
+| 6 | Regression Case Study | • End-to-end house-price prediction
+• Full workflow: data → model → evaluation → insights
+ |
+| 7 |  Intro to Classification (Logistic) | • Sigmoid function
+• Decision boundary
+• Predicting probabilities
+• Threshold tuning |
+| 8 | Classifiers Overview | • k-NN, SVM, Decision Trees
+• Strengths & weaknesses
+• Selecting the right model |
+| 9 | Classification Algorithms Bootcamp | Implementing logistic regression, k-NN, SVM,
+and decision tree classifiers; analyzing
+performance metrics |
+| 10 |  k-NN & SVM Classification | • Distance metrics
+• Choosing k
+• SVM hyperplanes
+• Kernel functions
+• Hands-on demos |
+| 11 |  Decision Trees & Random Forests | • Splitting criteria
+• Pruning
+• Ensembles for accuracy & robustness |
+| 12 | Classifier Showdown & Hyperparameter | • Comparing k-NN, SVM, Decision Trees, and Random Forests
+• Hyperparameter tuning
+• Full hands-on implementation for each |
+| 13 | Perceptron & Activation Functions | • Historical perceptron
+• Activation functions: ReLU, Sigmoid, Tanh
+• How activations shape decision surfaces
+• Building perceptron models |
+| 14 | K-Means & Unsupervised Metrics | • Centroid-based clustering
+• Inertia
+• Silhouette score
+• Interpreting clusters
+• Clustering with K-Means |
+| 15 | Neural Networks & Clustering Fundamentals | Building perceptron models; experimenting
+with activation functions; clustering with K-
+Means |
+| 16 | Neural Network Basics | Forward & backprop; weights, biases; building
+a small MLP in TensorFlow/PyTorch |
+| 17 | Training & Improving Neural Networks | • Forward & backpropagation
+• Weights and biases
+• Building MLPs using TensorFlow/PyTorch
+• Hyperparameter tuning
+• Dropout
+• Early stopping
+• Validation curves
+• Implementing MLPs with tuning |
+| 18 | Deep Learning with MLPs | Implementing MLPs; tuning hyperparameters;
+applying early stopping and dropout |
+| 19 | Convolutional Neural Networks (CNNs) | • Convolution & pooling operations
+• LeNet, AlexNet, VGG architectures
+• Applying CNNs to image data
+• Hands-on CNN modeling |
+| 20 | Model Deployment Basics | • Serializing models
+• REST API using Flask
+• Monitoring & scaling considerations
+• Deploying CNN models via Flask API |
+
+### **Drone Masterclasses conducted in Module 3 & Module 4**
+
+| S.No | Topic  | Key concepts |
+| --- | --- | --- |
+| 17 | **Masterclass: AI & ML in Drones – Part 1 & 2** | • Applications of AI in drones
+• Object detection
+• Path optimization
+• Automation workflows
+• Hands-on AI demos for drone systems |
+| 18 | **Masterclass: Localization of Drones – Part 1 & 2** | • Determining the position & movement of drones
+• GPS-based localization
+• Odometry
+• Sensor fusion
+• Drone localization demos using GPS, odometry, and fusion |

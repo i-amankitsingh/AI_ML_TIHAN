@@ -1,0 +1,802 @@
+Lecture Note: CNNs & Model Deployment
+(Hands-on CNNs; deploying models via Flask API; monitoring and scaling demos)
+
+1. What You Should Be Able to Explain After The Session
+Describe what a Convolutional Neural Network (CNN) does in intuitive terms.
+Name and explain the core building blocks of a CNN: convolutions, activations, pooling, dense layers, softmax.
+Distinguish between training and inference for a CNN.
+Explain at a high level how to turn a trained CNN into a Flask API with a /predict endpoint.
+Describe why monitoring and scaling are needed once a model is deployed and used by real clients.
+We will keep the math light but accurate, and use 
+.
+.
+.
+... for formulas where helpful.
+
+2. From Pixels to Predictions: Intuition of CNNs
+2.1 Images as Tensors
+A color image can be thought of as a 3D array (tensor):
+
+Height: 
+H
+H pixels
+Width: 
+W
+W pixels
+Channels: 
+3
+3 (Red, Green, Blue)
+So mathematically, an image can be represented as a tensor 
+X
+∈
+R
+H
+×
+W
+×
+3
+X∈R 
+H×W×3
+ , where each element is a pixel intensity.
+
+A naive approach would:
+
+Flatten this tensor into a vector of length 
+H
+⋅
+W
+⋅
+3
+H⋅W⋅3.
+Feed this directly into a fully connected (dense) neural network.
+Problems with this:
+
+Too many parameters when 
+H
+H and 
+W
+W are large.
+Ignores the spatial structure of images (neighboring pixels are related).
+CNNs solve this by using local connections and weight sharing.
+
+2.2 Convolutions: Local Receptive Fields & Weight Sharing
+A convolutional layer uses a small filter (kernel) that slides over the image:
+
+Filter size could be 
+3
+×
+3
+3×3, 
+5
+×
+5
+5×5, etc.
+At each spatial location, the filter looks at a small region (receptive field) and produces one output value.
+For a single-channel input and one filter 
+K
+K of size 
+k
+×
+k
+k×k, the convolution operation at position 
+(
+i
+,
+j
+)
+(i,j) is:
+
+Y
+i
+,
+j
+=
+∑
+u
+=
+1
+k
+∑
+v
+=
+1
+k
+K
+u
+,
+v
+⋅
+X
+i
++
+u
+−
+1
+,
+j
++
+v
+−
+1
+.
+Y 
+i,j
+​
+ = 
+u=1
+∑
+k
+​
+  
+v=1
+∑
+k
+​
+ K 
+u,v
+​
+ ⋅X 
+i+u−1,j+v−1
+​
+ .
+Key ideas:
+
+Local receptive field: each output 
+Y
+i
+,
+j
+Y 
+i,j
+​
+  depends only on a local patch of 
+X
+X.
+Weight sharing: the same kernel 
+K
+K is used at all 
+(
+i
+,
+j
+)
+(i,j) positions.
+We can have multiple filters 
+K
+(
+1
+)
+,
+K
+(
+2
+)
+,
+…
+K 
+(1)
+ ,K 
+(2)
+ ,…, each producing its own feature map.
+Interpretation:
+
+One filter might learn to detect horizontal edges.
+Another might detect vertical edges.
+Later layers combine these patterns into more complex features (eyes, wheels, digits, etc.).
+2.3 Non-Linearity: ReLU
+After convolution, we apply a non-linear activation function. The most common choice in CNNs is the ReLU (Rectified Linear Unit):
+
+ReLU
+(
+x
+)
+=
+max
+⁡
+(
+0
+,
+x
+)
+.
+ReLU(x)=max(0,x).
+Why we need it:
+
+Without non-linearity, stacking linear layers would still be a linear function.
+ReLU introduces non-linear behavior and helps the network approximate complex decision boundaries.
+It is simple and works well in practice.
+2.4 Pooling: Downsampling and Robustness
+Pooling layers reduce the spatial size of feature maps.
+
+Example: max pooling with window size 
+2
+×
+2
+2×2 and stride 2:
+
+Divide the feature map into non-overlapping 
+2
+×
+2
+2×2 blocks.
+In each block, take the maximum value.
+Results:
+
+Spatial size is reduced by a factor of 2 in height and width.
+The network becomes more robust to small translations (if an edge moves slightly, the max still captures it).
+Fewer activations mean fewer parameters and less computation in later layers.
+2.5 From Feature Maps to Class Scores
+After several convolution + ReLU + pooling blocks:
+
+The feature maps become smaller spatially (
+H
+′
+×
+W
+′
+H 
+′
+ ×W 
+′
+ ) but deeper in channels (
+C
+C).
+We then flatten this tensor into a vector of length 
+H
+′
+⋅
+W
+′
+⋅
+C
+H 
+′
+ ⋅W 
+′
+ ⋅C.
+This vector goes through one or more fully connected (dense) layers:
+
+Intermediate dense layers learn combinations of features.
+The final dense layer outputs a vector of scores (logits) for 
+K
+K classes:
+z
+=
+(
+z
+1
+,
+z
+2
+,
+…
+,
+z
+K
+)
+.
+z=(z 
+1
+​
+ ,z 
+2
+​
+ ,…,z 
+K
+​
+ ).
+We then apply softmax to convert these scores into probabilities:
+
+p
+k
+=
+e
+z
+k
+∑
+j
+=
+1
+K
+e
+z
+j
+,
+k
+=
+1
+,
+…
+,
+K
+.
+p 
+k
+​
+ = 
+∑ 
+j=1
+K
+​
+ e 
+z 
+j
+​
+ 
+ 
+e 
+z 
+k
+​
+ 
+ 
+​
+ ,k=1,…,K.
+Interpretation:
+
+p
+k
+p 
+k
+​
+  is the predicted probability for class 
+k
+k.
+The predicted class is usually 
+arg
+⁡
+max
+⁡
+k
+p
+k
+argmax 
+k
+​
+ p 
+k
+​
+ .
+2.6 Typical CNN Pipeline
+Putting it together:
+
+Input: Image 
+X
+∈
+R
+H
+×
+W
+×
+3
+X∈R 
+H×W×3
+ .
+Conv + ReLU (repeated): Extract local patterns (edges, textures, shapes).
+Pooling (occasionally): Reduce spatial size, keep strong responses.
+Flatten: Convert final feature maps into a vector.
+Dense layers: Combine features, produce class scores.
+Softmax: Turn scores into probabilities.
+You should be able to explain this flow verbally even without all the formulas.
+
+3. Training vs Inference
+3.1 Training Phase
+During training, the CNN learns its parameters (weights and biases):
+
+You have a dataset 
+(
+x
+i
+,
+y
+i
+)
+i
+=
+1
+N
+(x 
+i
+​
+ ,y 
+i
+​
+ ) 
+i=1
+N
+​
+ , where 
+x
+i
+x 
+i
+​
+  are images and 
+y
+i
+y 
+i
+​
+  are labels.
+
+For each batch of inputs, the network outputs predictions 
+y
+^
+i
+y
+^
+​
+  
+i
+​
+ .
+
+You define a loss function, often cross-entropy for classification:
+
+For one example with true label 
+y
+y and predicted probabilities 
+p
+k
+p 
+k
+​
+ :
+
+L
+=
+−
+log
+⁡
+p
+y
+.
+L=−logp 
+y
+​
+ .
+An optimizer (e.g., SGD, Adam) updates the weights to reduce the loss:
+
+θ
+←
+θ
+−
+η
+⋅
+∇
+θ
+L
+,
+θ←θ−η⋅∇ 
+θ
+​
+ L,
+where 
+θ
+θ is the vector of all parameters and 
+η
+η is the learning rate.
+
+Training characteristics:
+
+Slow and computationally expensive.
+Needs multiple epochs (passes over the dataset).
+Typically done offline (e.g., on a GPU machine).
+3.2 Inference Phase
+Once training is done:
+
+We freeze the weights 
+θ
+∗
+θ 
+∗
+  (no more updates).
+Inference is just computing 
+y
+^
+=
+f
+θ
+∗
+(
+x
+)
+y
+^
+​
+ =f 
+θ 
+∗
+ 
+​
+ (x) for a new input 
+x
+x.
+This is a forward pass through the network: convolutions, ReLU, pooling, dense layers, softmax.
+Important distinction:
+
+Training: model is changing; objective is to minimize loss.
+Inference: model is fixed; objective is to make predictions fast and reliably.
+Deployment is about making inference available as a service.
+
+4. Saving and Loading a Trained CNN
+In practice:
+
+After training, you save the model parameters:
+
+In PyTorch: torch.save(model.state_dict(), "cnn_model.pth")
+In TensorFlow/Keras: model.save("cnn_model.h5") or the SavedModel format.
+In the deployment script, you load these trained weights.
+
+Conceptually, you are storing the learned function 
+f
+θ
+∗
+f 
+θ 
+∗
+ 
+​
+  and reusing it in another program.
+
+5. Turning the CNN into a Service with Flask
+5.1 Basic Client–Server Picture
+To allow others to use your model:
+
+The model runs on a server (backend).
+Users or other services act as clients.
+Communication uses HTTP requests and responses.
+The model should be accessible through a URL (for example, http://myserver.com/predict).
+
+Typical flow:
+
+Client sends a request containing an image.
+Server receives it, passes it to the CNN.
+Server sends back a response with the predicted label (and maybe confidence).
+5.2 What Is Flask?
+Flask is a lightweight Python web framework that:
+
+Lets you create a web application in a few lines of code.
+Allows you to define routes such as /, /health, /predict.
+Integrates well with Python-based ML libraries (PyTorch, TensorFlow).
+Conceptually, Flask wraps your model in a web interface.
+
+5.3 Structure of a Simple Flask + CNN App
+High-level steps:
+
+Import libraries and create the Flask app:
+
+from flask import Flask, request, jsonify
+
+app = Flask(__name__)
+Load the trained model once at startup:
+
+model = load_trained_model("cnn_model.pth")
+model.eval()  # if using PyTorch
+This avoids loading the model for every request (which would be very slow).
+
+Define a /predict endpoint:
+
+@app.route("/predict", methods=["POST"])
+def predict():
+    # 1. Read input (e.g., image file) from request
+    # 2. Preprocess to match training format
+    # 3. Run model to get scores
+    # 4. Convert scores to label + confidence
+    # 5. Return JSON response
+    ...
+Run the Flask app:
+
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=5000)
+You do not need to memorize exact code; focus on the responsibilities:
+
+Preprocessing: resizing, normalizing, converting to tensor.
+Inference: using the CNN to compute predictions.
+Postprocessing: mapping outputs to human-readable labels and probabilities.
+Response: sending back JSON.
+5.4 Inside the /predict Endpoint
+Conceptual pipeline inside /predict:
+
+Receive the request:
+
+Read the image file from request.files["image"] (for example).
+Or read a base64-encoded image in request.json.
+Preprocess:
+
+Resize to the same size used during training (for example, 
+224
+×
+224
+224×224).
+Convert to tensor with shape (1, C, H, W) (batch size 1).
+Normalize pixel values (e.g., divide by 255, subtract mean, divide by std).
+Run the model:
+
+Disable gradient computation (in PyTorch: torch.no_grad()).
+Compute scores: scores = model(tensor).
+Postprocess:
+
+Apply softmax to obtain probabilities.
+Choose the class with highest probability.
+Example: label = "cat", confidence = 
+0.92
+0.92.
+Return JSON:
+
+{
+  "label": "cat",
+  "confidence": 0.92
+}
+Clients can parse this JSON and show a result in a web UI or mobile app.
+
+6. Monitoring a Deployed CNN Service
+Once your CNN is served via Flask, real users interact with it. Several questions become important:
+
+Are predictions returned quickly?
+Is the server stable, or is it failing under load?
+Is the model’s accuracy still acceptable on live data?
+This is where monitoring comes in.
+
+6.1 System-Level Metrics
+Common system metrics:
+
+Latency: how long it takes to serve a request.
+
+You might track average latency, 95th percentile, 99th percentile.
+High latency means users are waiting too long.
+Throughput: number of requests per second or per minute.
+
+CPU and memory usage:
+
+If CPU is at 100%, the server may be overloaded.
+If memory is near full, risk of crashes.
+GPU utilization (if using GPUs):
+
+Ensure the GPU is used efficiently but not over-saturated.
+Error rate:
+
+Fraction of requests that return HTTP status codes like 5xx (server errors).
+These can be tracked using logs, basic scripts, or monitoring tools and dashboards.
+
+6.2 Model-Level Metrics
+System metrics say if the service is healthy; model metrics say if the predictions are good.
+
+Possible model-level monitoring:
+
+Accuracy on a small labeled stream:
+
+Collect some live examples where you know the ground truth.
+Periodically compute accuracy, precision, recall, F1-score.
+Data drift detection (conceptual):
+
+Compare distributions of input features now vs during training.
+A large change might indicate that the model is seeing a new kind of data.
+Confidence histograms:
+
+Track how often the model is very confident vs uncertain.
+Sudden changes might be a warning sign.
+Monitoring supports decisions such as:
+
+When to retrain the model.
+Whether to roll back a new model version.
+Whether to add fallback logic (e.g., human review for low-confidence cases).
+7. Scaling: Handling More Traffic
+Your initial CNN+Flask service might be fine for a few requests per second. But if usage grows, the same setup might struggle.
+
+7.1 Vertical Scaling
+Vertical scaling means upgrading your machine:
+
+Faster CPU
+More RAM
+Better GPU
+Advantages:
+
+Simple to implement (just choose a larger instance).
+No changes in code or architecture.
+Disadvantages:
+
+There is a hardware limit.
+Cost increases quickly.
+7.2 Horizontal Scaling
+Horizontal scaling means using more machines or more processes:
+
+Run multiple instances of the Flask + CNN app (e.g., on different ports or different servers).
+Use a load balancer to distribute incoming requests among instances.
+High-level picture:
+
+Client sends request to the load balancer.
+Load balancer forwards it to one of many model servers.
+Each server has a copy of the model and returns predictions.
+Advantages:
+
+Can handle much higher traffic.
+You can scale in or out based on demand.
+Disadvantages:
+
+More complex infrastructure.
+Need to think about model versioning and deployment strategy.
+7.3 Process-Level Scaling on a Single Machine
+Even on a single machine, you can use multiple worker processes:
+
+Tools like gunicorn can start several workers.
+Each worker runs a copy of your Flask app and can handle requests independently.
+Example concept:
+
+1 machine, 1 GPU, 4 gunicorn workers.
+Load balancer (or reverse proxy) distributes requests among the workers.
+This improves throughput and robustness (if one worker fails, others continue).
+
+7.4 Other Scaling Ideas (At a High Level)
+Batching: process multiple inputs in a single forward pass to utilize GPU better.
+Caching: store results for repeated inputs.
+Model simplification: use a lighter CNN architecture for faster inference.
+At beginner level, it is enough to remember:
+
+When traffic grows, you can scale up (bigger machine) or out (more machines / processes) and use load balancing.
+
+8. End-to-End Story: From Notebook to Production
+Let’s connect everything in one flow, using a simple image classifier as an example.
+
+Model development in a notebook:
+
+Load training data (e.g., images of cats and dogs).
+Build a CNN with convolution, ReLU, pooling, dense layers, softmax.
+Train the model by minimizing cross-entropy loss.
+Evaluate accuracy on a validation set.
+Save the trained model:
+
+Save weights to a file such as "cnn_model.pth".
+Create a Flask app:
+
+Load the trained model when the app starts.
+Define /predict to receive an image, preprocess it, run inference, and return label + confidence.
+Deploy the Flask app:
+
+Run it on a server (for example, a cloud instance).
+Optionally, put it behind a reverse proxy or load balancer.
+Monitor:
+
+Track latency, throughput, errors.
+Occasionally test the model on known labeled examples.
+Scale:
+
+If the number of requests grows, add more instances or workers.
+Ensure the service remains responsive and stable.
+This is the core lifecycle from model training to model deployment and operation.
+
+9. Common Pitfalls and How to Avoid Them
+Loading the model inside /predict:
+
+Pitfall: calling load_trained_model for each request.
+Consequence: very high latency, possible timeouts.
+Fix: load the model once at startup and reuse it.
+Mismatched preprocessing:
+
+Pitfall: using different image size or normalization at inference than at training.
+Consequence: accuracy drops in deployment.
+Fix: ensure preprocessing in the Flask app matches training exactly.
+Ignoring errors and logs:
+
+Pitfall: no logging of requests, predictions, or errors.
+Consequence: hard to debug issues in production.
+Fix: add simple logging and monitor error rates.
+Single worker for heavy model:
+
+Pitfall: running a large CNN with only one worker.
+Consequence: slow response when multiple clients send requests.
+Fix: increase workers, consider horizontal scaling, or use a lighter model.
+10. Quick Self-Check Questions
+Try to answer these in your own words (no need for formulas):
+
+Why are convolutions with small filters and weight sharing better suited for images than fully connected layers on flattened pixels?
+
+Describe the typical sequence of layers in a simple CNN classifier starting from an input image and ending at class probabilities.
+
+What is the difference between training and inference for a CNN? Which one does deployment focus on, and why?
+
+In a Flask-based deployment, what are the main steps that the /predict endpoint must perform from receiving a request to sending a response?
+
+Name two system-level metrics and one model-level metric you would monitor for a deployed CNN service. Why are they useful?
+
+Explain, in simple terms, what vertical scaling and horizontal scaling mean in the context of serving a CNN model.

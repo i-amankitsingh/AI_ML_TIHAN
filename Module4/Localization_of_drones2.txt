@@ -1,0 +1,3548 @@
+Localization of Drones
+(Drone localization demo using GPS, odometry, and sensor fusion)
+Introduction
+Drone localization means estimating the drone's pose—its position and motion state—relative to a reference frame. We focus on a planar world frame 
+W
+W with coordinates 
+(
+x
+,
+y
+)
+(x,y) and velocity 
+(
+x
+˙
+,
+y
+˙
+)
+( 
+x
+˙
+ , 
+y
+˙
+​
+ ). At each time step 
+k
+k, we estimate a state vector 
+x
+k
+x 
+k
+​
+  that encodes "where the drone is" and "how it is moving". The flight controller and planner assume 
+x
+k
+x 
+k
+​
+  is reasonably accurate; if localization fails, even a well-tuned controller can crash the drone.
+
+Key insight: No single sensor gives perfect localization. GPS provides global position but is slow and noisy (meter-level). An IMU provides high-frequency accelerations and angular rates but only in the body frame—integrating IMU signals leads to large drift from small biases. Each sensor is partial and imperfect. Localization is therefore about fusing several imperfect sources into a single consistent estimate.
+
+We use a state-space view: the drone's motion follows 
+x
+k
++
+1
+=
+f
+(
+x
+k
+,
+u
+k
+,
+w
+k
+)
+x 
+k+1
+​
+ =f(x 
+k
+​
+ ,u 
+k
+​
+ ,w 
+k
+​
+ ), where 
+x
+k
+x 
+k
+​
+  is state, 
+u
+k
+u 
+k
+​
+  are inputs (IMU), and 
+w
+k
+w 
+k
+​
+  is process noise. Sensors produce measurements 
+z
+k
+=
+h
+(
+x
+k
+,
+v
+k
+)
+z 
+k
+​
+ =h(x 
+k
+​
+ ,v 
+k
+​
+ ) with measurement noise 
+v
+k
+v 
+k
+​
+ . The localization task: given model 
+f
+f, measurement function 
+h
+h, and noisy data 
+(
+u
+k
+,
+z
+k
+)
+(u 
+k
+​
+ ,z 
+k
+​
+ ), reconstruct the hidden state sequence 
+{
+x
+k
+}
+{x 
+k
+​
+ } in real time.
+
+For linear Gaussian models, the Kalman filter provides optimal recursive estimation, maintaining best-guess state 
+x
+^
+k
+x
+^
+  
+k
+​
+  and covariance 
+P
+k
+P 
+k
+​
+ . The filter alternates between prediction (using motion model and IMU) and update (correcting with GPS observations).
+
+This document simplifies to 2D, tracking position and velocity, using GPS and IMU-like acceleration. This captures all essential ideas—state-space modeling, noise, drift, sensor fusion, prediction vs correction trade-offs—without excessive notation.
+
+1. Problem Setup and Conceptual Overview
+1.1 Motivation: Why Drone Localization Matters
+A drone constantly needs an estimate of its state:
+
+Position in world frame (meters north/east/up)
+Orientation (heading direction)
+Often velocity, acceleration, and sensor biases
+Let 
+x
+(
+t
+)
+x(t) denote the state at time 
+t
+t. Simply:
+
+x
+(
+t
+)
+=
+[
+p
+W
+(
+t
+)
+v
+W
+(
+t
+)
+R
+B
+W
+(
+t
+)
+]
+x(t)= 
+​
+  
+p 
+W
+ (t)
+v 
+W
+ (t)
+R 
+B
+W
+​
+ (t)
+​
+  
+​
+ 
+
+Localization estimates 
+x
+(
+t
+)
+x(t) using sensor data.
+
+Poor localization causes:
+
+Controller thinks drone is higher than reality → crash
+Delivery drone misses target or enters restricted zones
+Inspection drone collides with structures
+High-quality localization is core to safety, control, and mission success.
+
+1.2 Pose, State, and Frames
+Reference Frames:
+
+World frame 
+W
+W: Fixed to environment (e.g., 
+x
+x-east, 
+y
+y-north, 
+z
+z-up)
+Body frame 
+B
+B: Attached to drone (e.g., 
+x
+B
+x 
+B
+​
+ -forward, 
+y
+B
+y 
+B
+​
+ -right, 
+z
+B
+z 
+B
+​
+ -down)
+Vectors: 
+v
+W
+v 
+W
+  in world frame, 
+v
+B
+v 
+B
+  in body frame.
+
+Pose:
+
+Position 
+p
+W
+=
+[
+x
+,
+y
+,
+z
+]
+⊤
+p 
+W
+ =[x,y,z] 
+⊤
+ 
+Orientation 
+R
+B
+W
+R 
+B
+W
+​
+ : rotation matrix mapping body vectors to world vectors
+v
+W
+=
+R
+B
+W
+⋅
+v
+B
+v 
+W
+ =R 
+B
+W
+​
+ ⋅v 
+B
+ 
+
+State typically includes pose plus dynamics:
+
+x
+=
+[
+p
+W
+v
+W
+q
+W
+B
+b
+a
+b
+ω
+]
+x= 
+​
+  
+p 
+W
+ 
+v 
+W
+ 
+q 
+WB
+ 
+b 
+a
+​
+ 
+b 
+ω
+​
+ 
+​
+  
+​
+ 
+
+where 
+b
+a
+b 
+a
+​
+  = accelerometer bias, 
+b
+ω
+b 
+ω
+​
+  = gyroscope bias.
+
+1.3 High-Level Role of GPS, IMU, and Odometry
+Three main information sources:
+
+1. GPS (Global Positioning System)
+
+Provides global position with noise: 
+z
+k
+GPS
+≈
+p
+k
+W
++
+n
+k
+GPS
+z 
+k
+GPS
+​
+ ≈p 
+k
+W
+​
+ +n 
+k
+GPS
+​
+ 
+✓ Ties trajectory to real world, no long-term drift
+✗ Noisy, low-rate, unavailable indoors
+2. IMU (Inertial Measurement Unit)
+
+Provides specific force (accelerometer) and angular velocity (gyroscope): 
+a
+m
+B
+≈
+a
+B
++
+b
+a
++
+n
+a
+a 
+m
+B
+​
+ ≈a 
+B
+ +b 
+a
+​
+ +n 
+a
+​
+  
+ω
+m
+B
+≈
+ω
+B
++
+b
+ω
++
+n
+ω
+ω 
+m
+B
+​
+ ≈ω 
+B
+ +b 
+ω
+​
+ +n 
+ω
+​
+ 
+Used to propagate orientation, velocity, position
+✓ Very high rate, captures fast motion
+✗ Suffers from drift if used alone
+3. Odometry / Visual Odometry
+
+Provides relative motion: 
+Δ
+p
+k
+Δp 
+k
+​
+ , 
+Δ
+R
+k
+ΔR 
+k
+​
+  between steps
+✓ Smooth short-term trajectory
+✗ Accumulates drift over long trajectories
+Fusion logic: Use IMU + odometry for short-term prediction; use GPS periodically to correct global drift. All embedded in Kalman filter framework.
+
+2. Mathematical Foundations of Drone Motion
+2.1 Coordinate Frames and Transformations
+World frame 
+W
+W: Fixed (e.g., east-north-up at takeoff) Body frame 
+B
+B: Fixed to drone
+
+Rotation matrix 
+R
+B
+W
+R 
+B
+W
+​
+  (body-to-world): 
+v
+W
+=
+R
+B
+W
+⋅
+v
+B
+v 
+W
+ =R 
+B
+W
+​
+ ⋅v 
+B
+ 
+
+Properties: 
+R
+B
+W
+R 
+B
+W
+​
+  is 
+3
+×
+3
+3×3 orthonormal, 
+(
+R
+B
+W
+)
+−
+1
+=
+(
+R
+B
+W
+)
+⊤
+(R 
+B
+W
+​
+ ) 
+−1
+ =(R 
+B
+W
+​
+ ) 
+⊤
+ .
+
+2.2 State Definition for Localization
+Common 3D state: 
+x
+(
+t
+)
+=
+[
+p
+W
+(
+t
+)
+v
+W
+(
+t
+)
+q
+B
+W
+(
+t
+)
+b
+a
+(
+t
+)
+b
+ω
+(
+t
+)
+]
+x(t)= 
+​
+  
+p 
+W
+ (t)
+v 
+W
+ (t)
+q 
+B
+W
+​
+ (t)
+b 
+a
+​
+ (t)
+b 
+ω
+​
+ (t)
+​
+  
+​
+ 
+
+Kinematic state: 
+(
+p
+W
+,
+v
+W
+,
+q
+B
+W
+)
+(p 
+W
+ ,v 
+W
+ ,q 
+B
+W
+​
+ )
+Sensor biases: 
+(
+b
+a
+,
+b
+ω
+)
+(b 
+a
+​
+ ,b 
+ω
+​
+ )
+Why include biases? IMU has slowly varying offsets. Modeling biases as state lets the filter estimate and correct them using GPS.
+
+For 2D demo, simpler state: 
+x
+k
+=
+[
+x
+k
+y
+k
+x
+˙
+k
+y
+˙
+k
+]
+x 
+k
+​
+ = 
+​
+  
+x 
+k
+​
+ 
+y 
+k
+​
+ 
+x
+˙
+  
+k
+​
+ 
+y
+˙
+​
+  
+k
+​
+ 
+​
+  
+​
+ 
+
+2.3 Continuous-Time Motion Model (with IMU)
+Let:
+
+a
+m
+B
+(
+t
+)
+a 
+m
+B
+​
+ (t) – measured specific force (accelerometer)
+ω
+m
+B
+(
+t
+)
+ω 
+m
+B
+​
+ (t) – measured angular velocity (gyroscope)
+Related to true values via: 
+a
+m
+B
+(
+t
+)
+=
+a
+B
+(
+t
+)
++
+b
+a
+(
+t
+)
++
+n
+a
+(
+t
+)
+a 
+m
+B
+​
+ (t)=a 
+B
+ (t)+b 
+a
+​
+ (t)+n 
+a
+​
+ (t) 
+ω
+m
+B
+(
+t
+)
+=
+ω
+B
+(
+t
+)
++
+b
+ω
+(
+t
+)
++
+n
+ω
+(
+t
+)
+ω 
+m
+B
+​
+ (t)=ω 
+B
+ (t)+b 
+ω
+​
+ (t)+n 
+ω
+​
+ (t)
+
+Position and Velocity Dynamics:
+
+Let gravity 
+g
+W
+=
+[
+0
+,
+0
+,
+−
+9.81
+]
+⊤
+g 
+W
+ =[0,0,−9.81] 
+⊤
+  m/s². True dynamics:
+
+p
+˙
+W
+(
+t
+)
+=
+v
+W
+(
+t
+)
+p
+˙
+​
+  
+W
+ (t)=v 
+W
+ (t) 
+v
+˙
+W
+(
+t
+)
+=
+R
+B
+W
+(
+t
+)
+(
+a
+m
+B
+(
+t
+)
+−
+b
+a
+(
+t
+)
+−
+n
+a
+(
+t
+)
+)
++
+g
+W
+v
+˙
+  
+W
+ (t)=R 
+B
+W
+​
+ (t)(a 
+m
+B
+​
+ (t)−b 
+a
+​
+ (t)−n 
+a
+​
+ (t))+g 
+W
+ 
+
+Explanation: 
+(
+a
+m
+B
+−
+b
+a
+−
+n
+a
+)
+(a 
+m
+B
+​
+ −b 
+a
+​
+ −n 
+a
+​
+ ) is estimated true specific force in body frame. 
+R
+B
+W
+R 
+B
+W
+​
+  rotates to world frame. Adding 
+g
+W
+g 
+W
+  converts to actual acceleration.
+
+Orientation Dynamics:
+
+With unit quaternion 
+q
+B
+W
+(
+t
+)
+q 
+B
+W
+​
+ (t): 
+q
+˙
+B
+W
+(
+t
+)
+=
+1
+2
+Ω
+(
+ω
+m
+B
+(
+t
+)
+−
+b
+ω
+(
+t
+)
+−
+n
+ω
+(
+t
+)
+)
+q
+B
+W
+(
+t
+)
+q
+˙
+​
+  
+B
+W
+​
+ (t)= 
+2
+1
+​
+ Ω(ω 
+m
+B
+​
+ (t)−b 
+ω
+​
+ (t)−n 
+ω
+​
+ (t))q 
+B
+W
+​
+ (t)
+
+Bias Dynamics:
+
+Modeled as slow random walks: 
+b
+˙
+a
+(
+t
+)
+=
+n
+b
+a
+(
+t
+)
+,
+b
+˙
+ω
+(
+t
+)
+=
+n
+b
+ω
+(
+t
+)
+b
+˙
+  
+a
+​
+ (t)=n 
+b 
+a
+​
+ 
+​
+ (t), 
+b
+˙
+  
+ω
+​
+ (t)=n 
+b 
+ω
+​
+ 
+​
+ (t)
+
+2.4 Discrete-Time Approximation
+Operate at discrete times 
+t
+k
+=
+k
+Δ
+t
+t 
+k
+​
+ =kΔt. For position and velocity with constant-acceleration assumption:
+
+a
+k
+W
+=
+R
+B
+,
+k
+W
+(
+a
+m
+,
+k
+B
+−
+b
+a
+,
+k
+)
++
+g
+W
+a 
+k
+W
+​
+ =R 
+B,k
+W
+​
+ (a 
+m,k
+B
+​
+ −b 
+a,k
+​
+ )+g 
+W
+ 
+
+Then: 
+p
+k
++
+1
+W
+≈
+p
+k
+W
++
+v
+k
+W
+Δ
+t
++
+1
+2
+a
+k
+W
+Δ
+t
+2
+p 
+k+1
+W
+​
+ ≈p 
+k
+W
+​
+ +v 
+k
+W
+​
+ Δt+ 
+2
+1
+​
+ a 
+k
+W
+​
+ Δt 
+2
+  
+v
+k
++
+1
+W
+≈
+v
+k
+W
++
+a
+k
+W
+Δ
+t
+v 
+k+1
+W
+​
+ ≈v 
+k
+W
+​
+ +a 
+k
+W
+​
+ Δt
+
+Compact form: 
+x
+k
++
+1
+=
+f
+(
+x
+k
+,
+u
+k
+)
++
+w
+k
+x 
+k+1
+​
+ =f(x 
+k
+​
+ ,u 
+k
+​
+ )+w 
+k
+​
+ 
+
+where 
+u
+k
+u 
+k
+​
+  contains IMU measurements, 
+w
+k
+w 
+k
+​
+  is process noise.
+
+For 2D KF demo, this becomes linear: 
+x
+k
++
+1
+=
+A
+x
+k
++
+B
+u
+k
++
+w
+k
+x 
+k+1
+​
+ =Ax 
+k
+​
+ +Bu 
+k
+​
+ +w 
+k
+​
+ 
+
+with state 
+x
+k
+=
+[
+x
+k
+,
+y
+k
+,
+x
+˙
+k
+,
+y
+˙
+k
+]
+⊤
+x 
+k
+​
+ =[x 
+k
+​
+ ,y 
+k
+​
+ , 
+x
+˙
+  
+k
+​
+ , 
+y
+˙
+​
+  
+k
+​
+ ] 
+⊤
+ .
+
+2.5 Process Noise and Uncertainty
+Motion model has uncertainty. Model as: 
+w
+k
+∼
+N
+(
+0
+,
+Q
+)
+w 
+k
+​
+ ∼N(0,Q)
+
+where 
+Q
+Q is process noise covariance.
+
+Interpretation:
+
+Larger 
+Q
+Q → trust model less, rely more on measurements
+Smaller 
+Q
+Q → trust model more, rely more on prediction
+Example 2D constant-velocity model:
+
+A
+=
+[
+1
+0
+Δ
+t
+0
+0
+1
+0
+Δ
+t
+0
+0
+1
+0
+0
+0
+0
+1
+]
+A= 
+​
+  
+1
+0
+0
+0
+​
+  
+0
+1
+0
+0
+​
+  
+Δt
+0
+1
+0
+​
+  
+0
+Δt
+0
+1
+​
+  
+​
+ 
+
+Standard 
+Q
+Q form: 
+Q
+=
+σ
+a
+2
+[
+Δ
+t
+4
+4
+0
+Δ
+t
+3
+2
+0
+0
+Δ
+t
+4
+4
+0
+Δ
+t
+3
+2
+Δ
+t
+3
+2
+0
+Δ
+t
+2
+0
+0
+Δ
+t
+3
+2
+0
+Δ
+t
+2
+]
+Q=σ 
+a
+2
+​
+  
+​
+  
+4
+Δt 
+4
+ 
+​
+ 
+0
+2
+Δt 
+3
+ 
+​
+ 
+0
+​
+  
+0
+4
+Δt 
+4
+ 
+​
+ 
+0
+2
+Δt 
+3
+ 
+​
+ 
+​
+  
+2
+Δt 
+3
+ 
+​
+ 
+0
+Δt 
+2
+ 
+0
+​
+  
+0
+2
+Δt 
+3
+ 
+​
+ 
+0
+Δt 
+2
+ 
+​
+  
+​
+ 
+
+Position uncertainty grows 
+∼
+Δ
+t
+2
+∼Δt 
+2
+ , velocity 
+∼
+Δ
+t
+∼Δt.
+
+3. Sensor Measurement Models
+Each sensor gives partial, noisy information: 
+z
+k
+=
+h
+(
+x
+k
+)
++
+v
+k
+z 
+k
+​
+ =h(x 
+k
+​
+ )+v 
+k
+​
+ 
+
+where 
+h
+(
+⋅
+)
+h(⋅) is measurement model, 
+v
+k
+v 
+k
+​
+  is noise.
+
+3.1 GPS Measurement Model
+After converting to local Cartesian (ENU): 
+z
+k
+GPS
+=
+p
+k
+W
++
+n
+k
+GPS
+z 
+k
+GPS
+​
+ =p 
+k
+W
+​
+ +n 
+k
+GPS
+​
+ 
+
+where 
+n
+k
+GPS
+∼
+N
+(
+0
+,
+R
+GPS
+)
+n 
+k
+GPS
+​
+ ∼N(0,R 
+GPS
+​
+ ).
+
+Measurement function: 
+h
+GPS
+(
+x
+k
+)
+=
+p
+k
+W
+h 
+GPS
+​
+ (x 
+k
+​
+ )=p 
+k
+W
+​
+ 
+
+For 2D state 
+[
+x
+,
+y
+,
+x
+˙
+,
+y
+˙
+]
+⊤
+[x,y, 
+x
+˙
+ , 
+y
+˙
+​
+ ] 
+⊤
+ : 
+z
+k
+GPS
+=
+[
+x
+k
+y
+k
+]
++
+n
+k
+GPS
+z 
+k
+GPS
+​
+ =[ 
+x 
+k
+​
+ 
+y 
+k
+​
+ 
+​
+ ]+n 
+k
+GPS
+​
+ 
+
+H
+GPS
+=
+[
+1
+0
+0
+0
+0
+1
+0
+0
+]
+H 
+GPS
+​
+ =[ 
+1
+0
+​
+  
+0
+1
+​
+  
+0
+0
+​
+  
+0
+0
+​
+ ]
+
+3.2 IMU Measurement Model
+IMU provides:
+
+Accelerometer: 
+a
+m
+B
+(
+k
+)
+=
+a
+B
+(
+k
+)
++
+b
+a
+,
+k
++
+n
+a
+,
+k
+a 
+m
+B
+​
+ (k)=a 
+B
+ (k)+b 
+a,k
+​
+ +n 
+a,k
+​
+ 
+Gyroscope: 
+ω
+m
+B
+(
+k
+)
+=
+ω
+B
+(
+k
+)
++
+b
+ω
+,
+k
++
+n
+ω
+,
+k
+ω 
+m
+B
+​
+ (k)=ω 
+B
+ (k)+b 
+ω,k
+​
+ +n 
+ω,k
+​
+ 
+Key difference: IMU is not used in measurement update step. Instead, IMU measurements are inputs 
+u
+k
+u 
+k
+​
+  to the process model (prediction step).
+
+Mental picture:
+
+GPS: "I see where you are" → used in update
+IMU: "I feel how you move" → used in prediction
+3.3 Optional Sensors
+Barometer (Altitude): 
+z
+k
+baro
+=
+z
+k
++
+n
+k
+baro
+z 
+k
+baro
+​
+ =z 
+k
+​
+ +n 
+k
+baro
+​
+ 
+
+Provides long-term altitude reference.
+
+Magnetometer (Heading/Yaw): 
+z
+k
+mag
+=
+ψ
+k
++
+n
+k
+mag
+z 
+k
+mag
+​
+ =ψ 
+k
+​
+ +n 
+k
+mag
+​
+ 
+
+Helps with heading but affected by magnetic disturbances.
+
+3.4 Measurement Noise Covariance 
+R
+R
+Each sensor noise: 
+v
+k
+∼
+N
+(
+0
+,
+R
+)
+v 
+k
+​
+ ∼N(0,R)
+
+In Kalman update:
+
+Small 
+R
+R → sensor reliable → strong correction
+Large 
+R
+R → sensor noisy → small correction
+Tuning 
+R
+R encodes trust in each sensor.
+
+4. State Estimation and Sensor Fusion
+4.1 State-Space Formulation
+Process model: 
+x
+k
++
+1
+=
+f
+(
+x
+k
+,
+u
+k
+)
++
+w
+k
+,
+w
+k
+∼
+N
+(
+0
+,
+Q
+)
+x 
+k+1
+​
+ =f(x 
+k
+​
+ ,u 
+k
+​
+ )+w 
+k
+​
+ ,w 
+k
+​
+ ∼N(0,Q)
+
+Measurement model: 
+z
+k
+=
+h
+(
+x
+k
+)
++
+v
+k
+,
+v
+k
+∼
+N
+(
+0
+,
+R
+)
+z 
+k
+​
+ =h(x 
+k
+​
+ )+v 
+k
+​
+ ,v 
+k
+​
+ ∼N(0,R)
+
+Linear-Gaussian special case: 
+x
+k
++
+1
+=
+A
+x
+k
++
+B
+u
+k
++
+w
+k
+x 
+k+1
+​
+ =Ax 
+k
+​
+ +Bu 
+k
+​
+ +w 
+k
+​
+  
+z
+k
+=
+H
+x
+k
++
+v
+k
+z 
+k
+​
+ =Hx 
+k
+​
+ +v 
+k
+​
+ 
+
+4.2 Linear Kalman Filter: 2D Constant-Velocity
+State: 
+x
+k
+=
+[
+x
+k
+y
+k
+x
+˙
+k
+y
+˙
+k
+]
+x 
+k
+​
+ = 
+​
+  
+x 
+k
+​
+ 
+y 
+k
+​
+ 
+x
+˙
+  
+k
+​
+ 
+y
+˙
+​
+  
+k
+​
+ 
+​
+  
+​
+ 
+
+Process model: 
+A
+=
+[
+1
+0
+Δ
+t
+0
+0
+1
+0
+Δ
+t
+0
+0
+1
+0
+0
+0
+0
+1
+]
+,
+B
+=
+0
+A= 
+​
+  
+1
+0
+0
+0
+​
+  
+0
+1
+0
+0
+​
+  
+Δt
+0
+1
+0
+​
+  
+0
+Δt
+0
+1
+​
+  
+​
+ ,B=0
+
+x
+k
++
+1
+=
+A
+x
+k
++
+w
+k
+,
+w
+k
+∼
+N
+(
+0
+,
+Q
+)
+x 
+k+1
+​
+ =Ax 
+k
+​
+ +w 
+k
+​
+ ,w 
+k
+​
+ ∼N(0,Q)
+
+Measurement model (GPS): 
+z
+k
+=
+H
+x
+k
++
+v
+k
+z 
+k
+​
+ =Hx 
+k
+​
+ +v 
+k
+​
+ 
+
+H
+=
+[
+1
+0
+0
+0
+0
+1
+0
+0
+]
+,
+R
+=
+[
+σ
+G
+P
+S
+2
+0
+0
+σ
+G
+P
+S
+2
+]
+H=[ 
+1
+0
+​
+  
+0
+1
+​
+  
+0
+0
+​
+  
+0
+0
+​
+ ],R=[ 
+σ 
+GPS
+2
+​
+ 
+0
+​
+  
+0
+σ 
+GPS
+2
+​
+ 
+​
+ ]
+
+Kalman Filter Equations:
+
+Filter maintains state estimate 
+x
+^
+k
+x
+^
+  
+k
+​
+  and error covariance 
+P
+k
+P 
+k
+​
+ .
+
+Prediction step: 
+x
+^
+k
+−
+=
+A
+x
+^
+k
+−
+1
+x
+^
+  
+k
+−
+​
+ =A 
+x
+^
+  
+k−1
+​
+  
+P
+k
+−
+=
+A
+P
+k
+−
+1
+A
+⊤
++
+Q
+P 
+k
+−
+​
+ =AP 
+k−1
+​
+ A 
+⊤
+ +Q
+
+Update step (with GPS):
+
+Innovation: 
+y
+k
+=
+z
+k
+−
+H
+x
+^
+k
+−
+y 
+k
+​
+ =z 
+k
+​
+ −H 
+x
+^
+  
+k
+−
+​
+ 
+
+Innovation covariance: 
+S
+k
+=
+H
+P
+k
+−
+H
+⊤
++
+R
+S 
+k
+​
+ =HP 
+k
+−
+​
+ H 
+⊤
+ +R
+
+Kalman gain: 
+K
+k
+=
+P
+k
+−
+H
+⊤
+S
+k
+−
+1
+K 
+k
+​
+ =P 
+k
+−
+​
+ H 
+⊤
+ S 
+k
+−1
+​
+ 
+
+Updated state: 
+x
+^
+k
+=
+x
+^
+k
+−
++
+K
+k
+y
+k
+x
+^
+  
+k
+​
+ = 
+x
+^
+  
+k
+−
+​
+ +K 
+k
+​
+ y 
+k
+​
+ 
+
+Updated covariance: 
+P
+k
+=
+(
+I
+−
+K
+k
+H
+)
+P
+k
+−
+P 
+k
+​
+ =(I−K 
+k
+​
+ H)P 
+k
+−
+​
+ 
+
+Interpretation:
+
+Prediction: "Where I think I am now"
+Innovation: "How different is GPS from expectation"
+Gain: "How much to trust this difference"
+Update: "Adjust belief accordingly"
+If 
+R
+R large → 
+K
+k
+K 
+k
+​
+  small → trust prediction more If 
+R
+R small → 
+K
+k
+K 
+k
+​
+  large → trust GPS more
+
+4.3 Extended Kalman Filter (EKF) for Nonlinear Systems
+For full 3D drone with orientation, system is nonlinear: 
+x
+k
++
+1
+=
+f
+(
+x
+k
+,
+u
+k
+)
++
+w
+k
+x 
+k+1
+​
+ =f(x 
+k
+​
+ ,u 
+k
+​
+ )+w 
+k
+​
+  
+z
+k
+=
+h
+(
+x
+k
+)
++
+v
+k
+z 
+k
+​
+ =h(x 
+k
+​
+ )+v 
+k
+​
+ 
+
+EKF linearizes around current estimate:
+
+Compute Jacobians: 
+F
+k
+=
+∂
+f
+∂
+x
+∣
+x
+^
+k
+,
+u
+k
+,
+H
+k
+=
+∂
+h
+∂
+x
+∣
+x
+^
+k
+F 
+k
+​
+ = 
+∂x
+∂f
+​
+  
+​
+  
+x
+^
+  
+k
+​
+ ,u 
+k
+​
+ 
+​
+ ,H 
+k
+​
+ = 
+∂x
+∂h
+​
+  
+​
+  
+x
+^
+  
+k
+​
+ 
+​
+ 
+
+Prediction: 
+x
+^
+k
+−
+=
+f
+(
+x
+^
+k
+−
+1
+,
+u
+k
+−
+1
+)
+x
+^
+  
+k
+−
+​
+ =f( 
+x
+^
+  
+k−1
+​
+ ,u 
+k−1
+​
+ ) 
+P
+k
+−
+=
+F
+k
+−
+1
+P
+k
+−
+1
+F
+k
+−
+1
+⊤
++
+Q
+P 
+k
+−
+​
+ =F 
+k−1
+​
+ P 
+k−1
+​
+ F 
+k−1
+⊤
+​
+ +Q
+
+Update (same structure as linear KF with 
+H
+k
+H 
+k
+​
+ ): 
+y
+k
+=
+z
+k
+−
+h
+(
+x
+^
+k
+−
+)
+y 
+k
+​
+ =z 
+k
+​
+ −h( 
+x
+^
+  
+k
+−
+​
+ ) 
+S
+k
+=
+H
+k
+P
+k
+−
+H
+k
+⊤
++
+R
+S 
+k
+​
+ =H 
+k
+​
+ P 
+k
+−
+​
+ H 
+k
+⊤
+​
+ +R 
+K
+k
+=
+P
+k
+−
+H
+k
+⊤
+S
+k
+−
+1
+K 
+k
+​
+ =P 
+k
+−
+​
+ H 
+k
+⊤
+​
+ S 
+k
+−1
+​
+  
+x
+^
+k
+=
+x
+^
+k
+−
++
+K
+k
+y
+k
+x
+^
+  
+k
+​
+ = 
+x
+^
+  
+k
+−
+​
+ +K 
+k
+​
+ y 
+k
+​
+  
+P
+k
+=
+(
+I
+−
+K
+k
+H
+k
+)
+P
+k
+−
+P 
+k
+​
+ =(I−K 
+k
+​
+ H 
+k
+​
+ )P 
+k
+−
+​
+ 
+
+4.4 Tuning and Uncertainty
+KF behavior controlled by 
+Q
+Q and 
+R
+R:
+
+Process noise 
+Q
+Q:
+
+Large 
+Q
+Q → model uncertain → flexible, responsive to measurements
+Small 
+Q
+Q → model trusted → resists measurement changes
+Measurement noise 
+R
+R:
+
+Small 
+R
+R → sensor accurate → fused estimate hugs measurements
+Large 
+R
+R → sensor noisy → smoother estimate closer to prediction
+Uncertainty matrix 
+P
+k
+P 
+k
+​
+ :
+
+Diagonal: variances of each state component
+Off-diagonal: correlations
+Filter cycle:
+
+Prediction: uncertainty grows (accumulate model error)
+Update: uncertainty shrinks (gain information from measurements)
+4.5 Failure Modes
+GPS Dropout:
+
+During dropout: only prediction → 
+P
+k
+P 
+k
+​
+  grows → estimate drifts
+When GPS returns: large innovation → strong correction if consistent
+GPS Outliers:
+
+Use gating test (Mahalanobis distance): 
+d
+k
+2
+=
+y
+k
+⊤
+S
+k
+−
+1
+y
+k
+d 
+k
+2
+​
+ =y 
+k
+⊤
+​
+ S 
+k
+−1
+​
+ y 
+k
+​
+ 
+If 
+d
+k
+2
+d 
+k
+2
+​
+  exceeds threshold, reject measurement
+IMU Bias:
+
+Without bias modeling → significant drift
+Include biases in state for GPS/VO to gradually estimate them
+5. Demo Implementation: 2D Localization (Python)
+Complete simulation showing:
+
+Ground-truth circular trajectory
+Noisy GPS points
+IMU-only dead-reckoned trajectory (with drift)
+Fused Kalman filter trajectory
+Model and State:
+
+State: 
+x
+k
+=
+[
+x
+k
+,
+y
+k
+,
+x
+˙
+k
+,
+y
+˙
+k
+]
+⊤
+x 
+k
+​
+ =[x 
+k
+​
+ ,y 
+k
+​
+ , 
+x
+˙
+  
+k
+​
+ , 
+y
+˙
+​
+  
+k
+​
+ ] 
+⊤
+ 
+
+Process model: 
+x
+k
++
+1
+=
+A
+x
+k
++
+B
+u
+k
++
+w
+k
+x 
+k+1
+​
+ =Ax 
+k
+​
+ +Bu 
+k
+​
+ +w 
+k
+​
+ 
+
+A
+=
+[
+1
+0
+Δ
+t
+0
+0
+1
+0
+Δ
+t
+0
+0
+1
+0
+0
+0
+0
+1
+]
+,
+B
+=
+[
+Δ
+t
+2
+2
+0
+0
+Δ
+t
+2
+2
+Δ
+t
+0
+0
+Δ
+t
+]
+A= 
+​
+  
+1
+0
+0
+0
+​
+  
+0
+1
+0
+0
+​
+  
+Δt
+0
+1
+0
+​
+  
+0
+Δt
+0
+1
+​
+  
+​
+ ,B= 
+​
+  
+2
+Δt 
+2
+ 
+​
+ 
+0
+Δt
+0
+​
+  
+0
+2
+Δt 
+2
+ 
+​
+ 
+0
+Δt
+​
+  
+​
+ 
+
+where 
+u
+k
+=
+[
+a
+x
+,
+k
+,
+a
+y
+,
+k
+]
+⊤
+u 
+k
+​
+ =[a 
+x,k
+​
+ ,a 
+y,k
+​
+ ] 
+⊤
+  is measured acceleration.
+
+Measurement model (GPS): 
+z
+k
+=
+H
+x
+k
++
+v
+k
+z 
+k
+​
+ =Hx 
+k
+​
+ +v 
+k
+​
+ 
+
+H
+=
+[
+1
+0
+0
+0
+0
+1
+0
+0
+]
+H=[ 
+1
+0
+​
+  
+0
+1
+​
+  
+0
+0
+​
+  
+0
+0
+​
+ ]
+
+Full Python code (see document for complete implementation - includes ground truth generation, sensor simulation, Kalman filter implementation, and visualization).
+
+Expected observations:
+
+Ground truth: smooth circle
+GPS: scattered, noisy points
+IMU-only: drifts away due to bias
+KF fused: smooth, minimal drift, degrades during GPS dropout but recovers
+6. Extensions and Next Steps
+6.1 Extending Toward 3D
+Add yaw (planar orientation):
+
+State: 
+x
+k
+=
+[
+x
+k
+,
+y
+k
+,
+θ
+k
+,
+v
+k
+]
+⊤
+x 
+k
+​
+ =[x 
+k
+​
+ ,y 
+k
+​
+ ,θ 
+k
+​
+ ,v 
+k
+​
+ ] 
+⊤
+  where 
+θ
+k
+θ 
+k
+​
+  is heading.
+
+Nonlinear process model: 
+x
+k
++
+1
+=
+x
+k
++
+v
+k
+cos
+⁡
+(
+θ
+k
+)
+Δ
+t
+x 
+k+1
+​
+ =x 
+k
+​
+ +v 
+k
+​
+ cos(θ 
+k
+​
+ )Δt 
+y
+k
++
+1
+=
+y
+k
++
+v
+k
+sin
+⁡
+(
+θ
+k
+)
+Δ
+t
+y 
+k+1
+​
+ =y 
+k
+​
+ +v 
+k
+​
+ sin(θ 
+k
+​
+ )Δt 
+θ
+k
++
+1
+=
+θ
+k
++
+ω
+k
+Δ
+t
+θ 
+k+1
+​
+ =θ 
+k
+​
+ +ω 
+k
+​
+ Δt 
+v
+k
++
+1
+=
+v
+k
++
+a
+k
+Δ
+t
+v 
+k+1
+​
+ =v 
+k
+​
+ +a 
+k
+​
+ Δt
+
+Requires EKF with Jacobian linearization.
+
+Full 3D state: 
+x
+k
+=
+[
+p
+k
+W
+v
+k
+W
+q
+k
+W
+B
+b
+a
+,
+k
+b
+ω
+,
+k
+]
+x 
+k
+​
+ = 
+​
+  
+p 
+k
+W
+​
+ 
+v 
+k
+W
+​
+ 
+q 
+k
+WB
+​
+ 
+b 
+a,k
+​
+ 
+b 
+ω,k
+​
+ 
+​
+  
+​
+ 
+
+Process uses quaternion dynamics, gravity transformation, bias random walks.
+
+6.2 Suggested Experiments
+Vary GPS noise 
+R
+R: Observe how fused trajectory changes from tight (small 
+R
+R) to smooth (large 
+R
+R)
+
+Vary process noise 
+Q
+Q: Test with small (lag in turns) vs large (noisy) 
+σ
+a
+σ 
+a
+​
+ 
+
+GPS dropout scenarios: Monitor error growth and recovery
+
+IMU bias sensitivity: Test with different bias magnitudes
+
+Multi-rate fusion: IMU at high rate, GPS at low rate
+
+6.3 Connection to Real Systems
+This 2D demo mirrors real autopilots (PX4, ArduPilot):
+
+Your KF state ↔ local position estimate
+IMU at high rate (200-1000 Hz) → prediction
+GPS at low rate → correction
+Same equations in EKF2/EKF3 modules
+Real systems add barometer (altitude), magnetometer (heading), vision/LiDAR (pose constraints).
+
+Summary
+Key takeaways:
+
+No single sensor is perfect → fusion is essential
+
+State-space framework:
+
+Process model: 
+x
+k
++
+1
+=
+f
+(
+x
+k
+,
+u
+k
+)
++
+w
+k
+x 
+k+1
+​
+ =f(x 
+k
+​
+ ,u 
+k
+​
+ )+w 
+k
+​
+ 
+Measurement model: 
+z
+k
+=
+h
+(
+x
+k
+)
++
+v
+k
+z 
+k
+​
+ =h(x 
+k
+​
+ )+v 
+k
+​
+ 
+Kalman filter cycle:
+
+Predict with IMU (high-rate, drifts)
+Update with GPS/sensors (low-rate, absolute)
+Tuning via 
+Q
+Q and 
+R
+R:
+
+Q
+Q → trust in motion model
+R
+R → trust in sensors
+Extensions: 2D demo → planar EKF → full 3D with quaternions

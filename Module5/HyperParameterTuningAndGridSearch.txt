@@ -1,0 +1,660 @@
+Hyperparameter Tuning & Grid Search (Notes)
+Part 1: Grid Search vs Random Search
+Start with the real question
+When you say “I want the best model,” what you really mean is:
+
+“I want the best hyperparameters for my model, without wasting time or accidentally overfitting.”
+
+So the decision becomes: How should I explore the hyperparameter space? Two classic choices: Grid Search and Random Search.
+
+1) Grid Search: “Try everything on the list”
+In grid search, you pre-decide a small set of values for each hyperparameter, then test all combinations.
+
+Example: suppose you tune an SVM with:
+
+C
+∈
+0.1
+,
+1
+,
+10
+C∈0.1,1,10
+kernel 
+∈
+linear
+,
+rbf
+∈linear,rbf
+Total combinations:
+
+3
+×
+2
+=
+6
+3×2=6
+So grid search says: “I will run all 6 experiments, measure performance, and pick the best.”
+
+When grid search feels like the right tool
+
+You have few hyperparameters (1–3 usually).
+You already have a good idea of reasonable values (like a tight range).
+You want repeatable and explainable tuning.
+What goes wrong with grid search
+
+The number of experiments grows multiplicatively. If you add just one more hyperparameter, it can explode.
+You may waste many trials on irrelevant dimensions.
+If you have:
+
+6 values for 
+C
+C
+5 values for 
+γ
+γ
+4 values for degree
+Total combinations:
+
+6
+×
+5
+×
+4
+=
+120
+6×5×4=120
+And if you do 5-fold CV later, it’s not 120 fits—it’s much more (we’ll discuss that in the CV section).
+
+2) Random Search: “Spend a fixed budget, sample smartly”
+Random search says: “I have a limited compute budget. I’ll try 
+N
+N random configurations.”
+
+Instead of listing a few fixed values, you define ranges/distributions, like:
+
+C
+∼
+log-uniform
+(
+10
+−
+3
+,
+10
+3
+)
+C∼log-uniform(10 
+−3
+ ,10 
+3
+ )
+γ
+∼
+log-uniform
+(
+10
+−
+4
+,
+10
+0
+)
+γ∼log-uniform(10 
+−4
+ ,10 
+0
+ )
+Then sample, say, 
+N
+=
+50
+N=50 settings.
+
+Why random search often wins in practice Here’s the key intuition:
+
+In many models, only 1–2 hyperparameters strongly influence performance. Random search explores more unique values for those important hyperparameters.
+
+Grid search wastes effort evenly across all dimensions. Random search “spreads out” and often hits good regions faster.
+
+When random search is the right first move
+
+You have many hyperparameters (4+).
+You don’t know good values yet.
+Compute is limited and you want a controlled budget (“only 30 trials”).
+What goes wrong with random search
+
+Results can vary between runs unless you set a seed.
+If your ranges are poorly chosen, you can sample nonsense values.
+3) A practical way to choose (simple decision rule)
+Ask yourself:
+
+Do I have a small, confident search space? → Use Grid Search.
+
+Do I have a large or uncertain search space? → Use Random Search first, then optionally refine with a smaller grid near the best region.
+
+This common 2-stage strategy works well:
+
+Random search to locate a good region
+Small grid search to fine-tune around it
+4) One important detail: scale matters (log vs linear)
+For hyperparameters like 
+C
+C, 
+γ
+γ, learning rate, weight decay—performance changes dramatically across orders of magnitude.
+
+So instead of trying:
+
+C
+∈
+1
+,
+2
+,
+3
+,
+4
+C∈1,2,3,4
+You usually want log-spaced:
+
+C
+∈
+10
+−
+3
+,
+10
+−
+2
+,
+10
+−
+1
+,
+10
+0
+,
+10
+1
+,
+10
+2
+,
+10
+3
+C∈10 
+−3
+ ,10 
+−2
+ ,10 
+−1
+ ,10 
+0
+ ,10 
+1
+ ,10 
+2
+ ,10 
+3
+ 
+This single change often improves tuning quality more than fancy tricks.
+
+Mini-checkpoint (quick self-test)
+If you have 6 hyperparameters and can afford only 40 training runs, which search is more sensible and why?
+For learning rate tuning, why is log-scale search typically better than linear?
+Part 2: Cross-validation inside tuning
+Let’s be very clear about the goal
+When you tune hyperparameters, you are making a decision like:
+
+“Which setting will perform best on new, unseen data?”
+
+But you don’t have new data available during training. So you need a simulation of “unseen data” using the training set itself. That is exactly what cross-validation (CV) does.
+
+1) Why a single train/validation split can mislead you
+Suppose you split once:
+
+train on 80%
+validate on 20%
+You tune hyperparameters based on that one validation score.
+
+Problem: that 20% split might be:
+
+unusually easy, or unusually hard,
+unrepresentative,
+or just lucky/unlucky.
+So you might pick hyperparameters that “fit the split” rather than generalize.
+
+2) Cross-validation: repeated mini-experiments
+In 
+K
+K-fold CV, you divide training data into 
+K
+K folds.
+
+For each hyperparameter setting:
+
+Train on 
+K
+−
+1
+K−1 folds
+Validate on the remaining fold
+Repeat for all folds
+Average the validation performance
+If the fold scores are 
+s
+1
+,
+s
+2
+,
+…
+,
+s
+K
+s 
+1
+​
+ ,s 
+2
+​
+ ,…,s 
+K
+​
+ , then mean CV score is:
+
+s
+ˉ
+=
+1
+K
+∑
+i
+=
+1
+K
+s
+i
+s
+ˉ
+ = 
+K
+1
+​
+  
+i=1
+∑
+K
+​
+ s 
+i
+​
+ 
+So instead of trusting one split, you trust an average across multiple splits.
+
+Interpretation: CV gives you a more stable estimate of how a hyperparameter setting behaves.
+
+3) The correct pipeline for tuning (the “no cheating” rule)
+A clean workflow looks like this:
+
+Split your dataset into:
+
+Train set (for tuning + fitting)
+Test set (final evaluation only)
+Inside the train set:
+
+Run CV for each hyperparameter candidate
+Choose the best hyperparameters
+Refit a model on the full train set using those hyperparameters
+Finally:
+
+Evaluate once on the test set
+This is the core rule:
+
+The test set must be “touched” only once, at the very end.
+
+4) What goes wrong if you don’t do CV inside tuning?
+If you tune hyperparameters on the test set, even indirectly, you are doing “test-set selection”.
+
+That inflates performance because you picked hyperparameters that happen to do well on that specific test sample.
+
+So the final test score no longer represents generalization.
+
+5) The hidden compute cost (why tuning can become expensive)
+This is where many people underestimate the time.
+
+If you have:
+
+M
+M hyperparameter combinations
+K
+K folds
+Total model fits:
+
+M
+×
+K
+M×K
+Example: if grid search has 
+M
+=
+120
+M=120 combinations and you use 
+K
+=
+5
+K=5 folds:
+
+120
+×
+5
+=
+600
+ fits
+120×5=600 fits
+So CV makes tuning more reliable—but increases compute.
+
+That’s why random search + smaller CV choices are often used in practice.
+
+6) The biggest real-world mistake: leakage through preprocessing
+This mistake is extremely common:
+
+You do scaling/normalization using the full dataset:
+
+compute mean/std on all samples
+then do CV
+That leaks information because the validation fold influenced the preprocessing statistics.
+
+Correct approach: preprocessing must be learned only from the training part of each fold. In scikit-learn, you ensure this using a Pipeline.
+
+Conceptually, per fold:
+
+Fit scaler on train-fold only
+Transform train-fold and val-fold using that scaler
+Train model, evaluate
+7) Nested CV (when you want the most honest estimate)
+If data is small and tuning is heavy, even CV-based tuning can still be optimistic because you used CV results to choose hyperparameters.
+
+Nested CV fixes that by having two loops:
+
+Outer loop: evaluation
+Inner loop: tuning
+Conceptually:
+
+Outer CV: evaluate
+(
+Inner CV: tune hyperparameters
+)
+Outer CV: evaluate(Inner CV: tune hyperparameters)
+You don’t always need nested CV, but it’s a strong option when:
+
+dataset is small
+you need a publication-grade estimate
+you’re comparing many models fairly
+Mini-checkpoint (quick self-test)
+If you run hyperparameter tuning on the test set and then report test accuracy, what exactly is wrong with that number?
+If your grid has 
+M
+=
+40
+M=40 combinations and you use 
+K
+=
+10
+K=10 folds, how many model fits occur?
+Why does scaling before CV cause leakage?
+Part 3: Using GridSearchCV
+Think of GridSearchCV as a careful experiment manager
+When you tune hyperparameters, you’re basically running many controlled experiments:
+
+try a setting
+validate it fairly (with CV)
+record the score
+choose the best setting
+GridSearchCV automates that entire process.
+
+1) What GridSearchCV does (in plain steps)
+Assume you provide:
+
+a model (estimator)
+a grid of hyperparameters
+a CV strategy (like 5-fold)
+a scoring metric
+Then GridSearchCV will:
+
+Create all hyperparameter combinations from your grid
+For each combination, run 
+K
+K-fold cross-validation
+Compute the mean CV score for that combination
+Select the best-performing combination
+Refit the model on the full training set using the best hyperparameters (this happens when refit=True, which is the default)
+So internally, if you have 
+M
+M grid points and 
+K
+K folds, total fits are:
+
+M
+×
+K
+M×K
+2) Most important arguments you should know
+(a) param_grid
+This is the search space. Example:
+
+C
+∈
+0.1
+,
+1
+,
+10
+C∈0.1,1,10
+kernel 
+∈
+linear
+,
+rbf
+∈linear,rbf
+Combinations are the Cartesian product.
+
+(b) cv
+This defines how many folds (or what splitter) to use.
+
+Typical: cv=5 or cv=10
+(c) scoring
+This tells GridSearchCV what “best” means.
+
+Balanced dataset: "accuracy" is okay
+Imbalanced dataset: often better to use "f1", "roc_auc", "average_precision"
+(d) n_jobs
+Parallelism on CPU:
+
+n_jobs=-1 uses all cores
+(e) refit
+refit=True means after finding best hyperparameters, it trains a final model on all training data.
+That final trained model is available as best_estimator_.
+3) The most common correct pattern: Pipeline + GridSearchCV
+The main reason you should use a pipeline is to avoid leakage from preprocessing.
+
+If you scale data, you must ensure scaling is fit only on training folds during CV.
+
+Example: SVM with scaling (leakage-safe)
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import StandardScaler
+from sklearn.svm import SVC
+from sklearn.model_selection import GridSearchCV
+
+pipe = Pipeline([
+    ("scaler", StandardScaler()),
+    ("svc", SVC())
+])
+
+param_grid = {
+    "svc__C": [0.1, 1, 10],
+    "svc__kernel": ["linear", "rbf"],
+    "svc__gamma": ["scale", "auto"]
+}
+
+search = GridSearchCV(
+    estimator=pipe,
+    param_grid=param_grid,
+    cv=5,
+    scoring="accuracy",
+    n_jobs=-1,
+    refit=True
+)
+
+search.fit(X_train, y_train)
+
+print("Best params:", search.best_params_)
+print("Best CV score:", search.best_score_)
+
+best_model = search.best_estimator_
+What to notice (very important)
+Parameter names use the pattern: stepname__paramname
+Here the step name is "svc", so we tune "svc__C", "svc__kernel", etc.
+4) What results you get back (how to read them)
+After fitting:
+
+(a) best_params_
+A dictionary of the best hyperparameters found.
+
+(b) best_score_
+The best mean cross-validation score.
+
+If 
+K
+=
+5
+K=5 folds, this is essentially:
+
+max
+⁡
+θ
+∈
+grid
+;
+1
+5
+∑
+i
+=
+1
+5
+s
+i
+(
+θ
+)
+θ∈grid
+max
+​
+ ; 
+5
+1
+​
+  
+i=1
+∑
+5
+​
+ s 
+i
+​
+ (θ)
+where 
+θ
+θ is a hyperparameter setting.
+
+(c) best_estimator_
+A fully trained pipeline/model refit on the entire 
+X
+train
+X 
+train
+​
+  with best hyperparameters.
+
+(d) cv_results_
+A full table of every configuration tried and its mean/variance across folds. This is how you analyze:
+
+“How sensitive is performance to 
+C
+C?”
+“Is the best setting only slightly better than others?”
+“Which settings are unstable across folds?”
+5) Practical tips that save you time
+Tip 1: Use log-spaced values for scale-sensitive hyperparameters
+For 
+C
+C, 
+γ
+γ, learning rate, weight decay, etc., search across orders of magnitude:
+
+10
+−
+3
+,
+10
+−
+2
+,
+10
+−
+1
+,
+10
+0
+,
+10
+1
+,
+10
+2
+,
+10
+3
+10 
+−3
+ ,10 
+−2
+ ,10 
+−1
+ ,10 
+0
+ ,10 
+1
+ ,10 
+2
+ ,10 
+3
+ 
+Tip 2: Keep the grid small first, then refine
+A strong workflow:
+
+coarse grid (fast)
+inspect results
+narrow grid around best region
+Tip 3: Match scoring to the real objective
+If the dataset is imbalanced, accuracy can be misleading. Prefer metrics like:
+
+F1 score
+ROC-AUC
+PR-AUC (Average Precision)
+Mini-checkpoint (quick self-test)
+If your grid has 
+M
+=
+30
+M=30 combinations and cv=5, how many fits happen?
+30
+×
+5
+=
+150
+30×5=150
+Why is Pipeline important when scaling or doing feature selection?
+In a pipeline step named "model", how would you tune parameter alpha? (answer format: "______")

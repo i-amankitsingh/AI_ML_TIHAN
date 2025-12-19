@@ -1,0 +1,3270 @@
+NOTES: Localization of Drones
+How Drones Know Where They Are (GPS, odometry, and sensor fusion)
+1. Introduction to Drone Localization
+My image My image
+
+1.1 What Is Localization?
+Imagine you're blindfolded in a large room. Someone spins you around and asks "where are you?" That's essentially what a drone faces every millisecond it's flying!
+
+Localization is how a drone answers three questions:
+
+Where am I? (position in 3D)
+Which way am I facing? (orientation)
+How fast am I moving? (velocity)
+The drone's state vector captures all this information:
+
+state
+(
+t
+)
+=
+(
+x
+,
+y
+,
+z
+,
+v
+x
+,
+v
+y
+,
+v
+z
+,
+yaw
+,
+pitch
+,
+roll
+)
+state(t)=(x,y,z,v 
+x
+​
+ ,v 
+y
+​
+ ,v 
+z
+​
+ ,yaw,pitch,roll)
+
+Here's the catch: the drone never knows these values perfectly. Its sensors are like friends giving you hints—some are reliable but slow, others are fast but get confused easily. The drone must constantly piece together these imperfect clues:
+
+x
+k
+=
+true state
++
+estimation error
+x 
+k
+​
+ =true state+estimation error
+
+Think of it like asking 5 friends where you left your keys—you'd combine their hints and trust the most reliable friend more. That's exactly what drones do!
+
+1.2 Why Localization Matters
+A drone's software works in layers:
+
+Sensors → Localization → Planning → Control → Mission
+
+If localization fails, everything breaks down. Imagine GPS saying you're 10m away from where you actually are—the planner sends you the wrong way, and your drone might crash!
+
+Key insight: Every layer above localization depends on getting an accurate state estimate. Poor localization = mission failure.
+
+1.3 Three Ways Drones Locate Themselves
+1. GPS: The Global Guide
+
+Like asking a satellite "Hey, where am I on Earth?"
+Provides: 
+p
+W
+=
+[
+x
+W
+,
+y
+W
+,
+z
+W
+]
+p 
+W
+ =[x 
+W
+ ,y 
+W
+ ,z 
+W
+ ] (position in world frame)
+Good: Never gets lost in the big picture, absolute reference
+Bad: Updates slowly (~1-10 Hz), meter-level accuracy, fails indoors
+Best for: Outdoor navigation, waypoint missions
+2. Odometry: The Step Counter
+
+Tracks motion by integrating small movements:
+x
+k
++
+1
+=
+x
+k
++
+Δ
+x
+k
+x 
+k+1
+​
+ =x 
+k
+​
+ +Δx 
+k
+​
+ 
+
+Sources: IMU (feels acceleration/rotation), cameras (tracks features), LiDAR (maps surroundings)
+Good: Super fast (100-1000 Hz), very smooth
+Bad: Drift—small errors compound over time like compound interest
+Best for: Smooth flight between GPS updates, indoor flight
+3. Sensor Fusion: The Smart Combiner
+
+Blends all sensors using algorithms (like Extended Kalman Filter)
+Uses two steps:
+Predict: Use IMU to estimate next state
+Update: Correct with GPS, camera, etc.
+x
+^
+k
++
+1
+=
+prediction from IMU
++
+correction from sensors
+x
+^
+  
+k+1
+​
+ =prediction from IMU+correction from sensors
+
+Good: Combines everyone's strengths, robust to failures
+Bad: Complex to tune
+Best for: Real-world reliable flying
+2. Understanding the Drone's "State"
+2.1 What's a State?
+A drone's state is like its ID card at any moment. Minimum information needed:
+
+Position: 
+x
+,
+y
+,
+z
+x,y,z (where am I in 3D space?)
+Velocity: 
+v
+x
+,
+v
+y
+,
+v
+z
+v 
+x
+​
+ ,v 
+y
+​
+ ,v 
+z
+​
+  (how fast am I moving?)
+Orientation: yaw, pitch, roll (which way am I facing?)
+We can write this compactly as:
+
+x
+=
+[
+x
+,
+y
+,
+z
+,
+v
+x
+,
+v
+y
+,
+v
+z
+,
+yaw
+,
+pitch
+,
+roll
+]
+T
+x=[x,y,z,v 
+x
+​
+ ,v 
+y
+​
+ ,v 
+z
+​
+ ,yaw,pitch,roll] 
+T
+ 
+
+In practice, we also track sensor biases (systematic errors in IMU):
+
+x
+full
+=
+[
+p
+W
+,
+v
+W
+,
+q
+W
+B
+,
+b
+a
+,
+b
+ω
+]
+T
+x 
+full
+​
+ =[p 
+W
+ ,v 
+W
+ ,q 
+WB
+ ,b 
+a
+​
+ ,b 
+ω
+​
+ ] 
+T
+ 
+
+where:
+
+p
+W
+p 
+W
+  = position (3 values)
+v
+W
+v 
+W
+  = velocity (3 values)
+q
+W
+B
+q 
+WB
+  = orientation quaternion (4 values)
+b
+a
+b 
+a
+​
+  = accelerometer bias (3 values)
+b
+ω
+b 
+ω
+​
+  = gyroscope bias (3 values)
+Total: 16 state variables that the filter estimates!
+
+2.2 Two Important Coordinate Systems
+World Frame 
+W
+W: Fixed map (like GPS coordinates)
+
+Axes: East, North, Up (ENU convention)
+Planning happens here: "fly to (10, 15, 20)"
+Body Frame 
+B
+B: Attached to drone
+
+Axes: Forward, Right, Down (relative to drone)
+Sensors read here: "accelerating 2m/s² forward"
+The conversion magic: Rotation matrix 
+R
+B
+W
+R 
+B
+W
+​
+  transforms between frames:
+
+v
+W
+=
+R
+B
+W
+⋅
+v
+B
+v 
+W
+ =R 
+B
+W
+​
+ ⋅v 
+B
+ 
+
+This says: "a vector in body frame, when transformed by 
+R
+B
+W
+R 
+B
+W
+​
+ , gives its equivalent in world frame."
+
+Example: If IMU says "2 m/s² forward" and drone is tilted 45° up:
+
+a
+W
+=
+R
+B
+W
+[
+2
+0
+0
+]
+≈
+[
+1.41
+0
+1.41
+]
+a 
+W
+ =R 
+B
+W
+​
+  
+​
+  
+2
+0
+0
+​
+  
+​
+ ≈ 
+​
+  
+1.41
+0
+1.41
+​
+  
+​
+ 
+
+The forward acceleration now has components in both horizontal and vertical directions!
+
+3. The Sensor Team
+Think of sensors as a team where everyone has a specialty:
+
+3.1 GPS: The Slow but Wise Elder
+GPS talks to satellites to figure out position. After coordinate conversion to local frame:
+
+z
+k
+GPS
+=
+[
+x
+W
+y
+W
+z
+W
+]
++
+v
+GPS
+z 
+k
+GPS
+​
+ = 
+​
+  
+x 
+W
+ 
+y 
+W
+ 
+z 
+W
+ 
+​
+  
+​
+ +v 
+GPS
+ 
+
+where 
+v
+GPS
+v 
+GPS
+  is measurement noise (typically 2-5m standard deviation).
+
+Measurement model: GPS directly observes position components:
+
+z
+GPS
+=
+H
+GPS
+⋅
+x
++
+v
+GPS
+z 
+GPS
+ =H 
+GPS
+​
+ ⋅x+v 
+GPS
+ 
+
+where 
+H
+GPS
+=
+[
+I
+3
+0
+0
+⋯
+ 
+]
+H 
+GPS
+​
+ =[I 
+3
+​
+ 00⋯] just picks out the position part from full state.
+
+Personality traits:
+
+✓ Reliable outdoors
+✗ Slow updates (1-10 Hz)
+✗ Goes blind indoors
+✗ No orientation info
+3.2 IMU: The Hyperactive Youngster
+The IMU has two sensors providing the motion model backbone:
+
+Gyroscope measures angular rate: 
+ω
+meas
+B
+=
+ω
+true
+B
++
+b
+ω
++
+n
+ω
+ω 
+meas
+B
+​
+ =ω 
+true
+B
+​
+ +b 
+ω
+​
+ +n 
+ω
+​
+ 
+
+After bias correction 
+ω
+~
+k
+B
+=
+ω
+meas
+B
+−
+b
+^
+ω
+ω
+~
+  
+k
+B
+​
+ =ω 
+meas
+B
+​
+ − 
+b
+^
+  
+ω
+​
+ , integrated to update orientation over time 
+Δ
+t
+Δt: 
+R
+k
++
+1
+W
+B
+=
+R
+k
+W
+B
+⋅
+exp
+⁡
+(
+[
+ω
+~
+k
+B
+Δ
+t
+]
+×
+)
+R 
+k+1
+W
+​
+  
+B
+​
+ =R 
+k
+W
+​
+  
+B
+​
+ ⋅exp([ 
+ω
+~
+  
+k
+B
+​
+ Δt] 
+×
+​
+ )
+
+Accelerometer measures specific force: 
+f
+meas
+B
+=
+R
+W
+B
+(
+a
+W
+−
+g
+W
+)
++
+b
+a
++
+n
+a
+f 
+meas
+B
+​
+ =R 
+W
+B
+​
+ (a 
+W
+ −g 
+W
+ )+b 
+a
+​
+ +n 
+a
+​
+ 
+
+After bias correction 
+f
+~
+k
+B
+=
+f
+meas
+B
+−
+b
+^
+a
+f
+~
+​
+  
+k
+B
+​
+ =f 
+meas
+B
+​
+ − 
+b
+^
+  
+a
+​
+  and transforming to world frame: 
+a
+W
+=
+R
+B
+W
+(
+f
+~
+k
+B
+)
++
+g
+W
+a 
+W
+ =R 
+B
+W
+​
+ ( 
+f
+~
+​
+  
+k
+B
+​
+ )+g 
+W
+ 
+
+Then integrate to get velocity and position: 
+v
+k
++
+1
+W
+=
+v
+k
+W
++
+a
+k
+W
+Δ
+t
+v 
+k+1
+W
+​
+ =v 
+k
+W
+​
+ +a 
+k
+W
+​
+ Δt 
+p
+k
++
+1
+W
+=
+p
+k
+W
++
+v
+k
+W
+Δ
+t
++
+1
+2
+a
+k
+W
+(
+Δ
+t
+)
+2
+p 
+k+1
+W
+​
+ =p 
+k
+W
+​
+ +v 
+k
+W
+​
+ Δt+ 
+2
+1
+​
+ a 
+k
+W
+​
+ (Δt) 
+2
+ 
+
+The drift problem: A tiny 0.01 m/s² bias leads to:
+
+After 1 sec: velocity error ≈ 0.01 m/s
+After 10 sec: position error ≈ 0.5 m
+After 60 sec: position error ≈ 18 m! (grows as 
+1
+2
+b
+t
+2
+2
+1
+​
+ bt 
+2
+ )
+Personality traits:
+
+✓ Super fast (200-1000 Hz)
+✓ Very smooth
+✗ Drifts terribly over time
+3.3 Cameras: The Visual Detective
+Visual Odometry tracks features (corners, edges) across frames to estimate relative motion 
+Δ
+T
+ΔT.
+
+The camera projects 3D world point 
+P
+W
+P 
+W
+  to 2D pixel 
+(
+u
+,
+v
+)
+(u,v):
+
+[
+u
+v
+1
+]
+∝
+K
+⋅
+R
+W
+C
+(
+P
+W
+−
+p
+W
+)
+​
+  
+u
+v
+1
+​
+  
+​
+ ∝K⋅R 
+W
+C
+​
+ (P 
+W
+ −p 
+W
+ )
+
+where 
+K
+K is the camera calibration matrix.
+
+By tracking the same feature in frames 
+k
+k and 
+k
++
+1
+k+1, we estimate:
+
+Δ
+T
+k
+k
++
+1
+=
+[
+R
+k
+k
++
+1
+t
+k
+k
++
+1
+0
+1
+]
+ΔT 
+k
+k+1
+​
+ =[ 
+R 
+k
+k+1
+​
+ 
+0
+​
+  
+t 
+k
+k+1
+​
+ 
+1
+​
+ ]
+
+Global pose comes from composing increments: 
+T
+k
++
+N
+=
+T
+k
+⋅
+Δ
+T
+k
+k
++
+1
+⋅
+Δ
+T
+k
++
+1
+k
++
+2
+⋯
+T 
+k+N
+​
+ =T 
+k
+​
+ ⋅ΔT 
+k
+k+1
+​
+ ⋅ΔT 
+k+1
+k+2
+​
+ ⋯
+
+The catch: Each small error multiplies down the chain → drift.
+
+Comes in flavors:
+
+Monocular (one camera): Can't tell scale—is that a toy car 1m away or real car 10m away?
+Stereo/RGB-D (depth camera): Knows distances, provides full metric scale
+Personality traits:
+
+✓ Works well with texture and light
+✓ GPS-denied operation
+✗ Struggles with blank walls
+✗ Fails in darkness
+3.4 LiDAR: The Geometry Expert
+Shoots laser beams and measures distances to create 3D point clouds. Matches consecutive clouds to estimate movement.
+
+A LiDAR scan at time 
+k
+k is a set of 3D points: 
+P
+k
+=
+{
+P
+i
+,
+k
+L
+}
+=
+{
+(
+x
+i
+,
+k
+L
+,
+y
+i
+,
+k
+L
+,
+z
+i
+,
+k
+L
+)
+}
+P 
+k
+​
+ ={P 
+i,k
+L
+​
+ }={(x 
+i,k
+L
+​
+ ,y 
+i,k
+L
+​
+ ,z 
+i,k
+L
+​
+ )}
+
+LiDAR odometry estimates the relative transform 
+Δ
+T
+k
+k
++
+1
+ΔT 
+k
+k+1
+​
+  that best aligns two consecutive scans:
+
+P
+i
+,
+k
++
+1
+L
+≈
+Δ
+T
+k
+k
++
+1
+P
+m
+(
+i
+)
+,
+k
+L
+P 
+i,k+1
+L
+​
+ ≈ΔT 
+k
+k+1
+​
+ P 
+m(i),k
+L
+​
+ 
+
+Personality traits:
+
+✓ Works in dark
+✓ Loves 3D structure
+✗ Expensive and heavy
+3.5 Supporting Cast
+Barometer: Measures altitude via air pressure 
+z
+baro
+=
+z
+W
++
+v
+baro
+z 
+baro
+ =z 
+W
+ +v 
+baro
+ 
+
+Great for holding height, but drifts slowly with weather changes.
+
+Magnetometer: Provides heading by measuring Earth's magnetic field 
+z
+mag
+=
+R
+W
+B
+⋅
+B
+W
++
+v
+mag
+z 
+mag
+ =R 
+W
+B
+​
+ ⋅B 
+W
+ +v 
+mag
+ 
+
+Helps with heading but gets confused near metal.
+
+Optical Flow: Downward camera watching ground texture 
+z
+flow
+=
+[
+v
+x
+B
+v
+y
+B
+]
++
+v
+flow
+z 
+flow
+ =[ 
+v 
+x
+B
+​
+ 
+v 
+y
+B
+​
+ 
+​
+ ]+v 
+flow
+ 
+
+Says "ground is moving this fast below me."
+
+4. GPS-Based Localization
+4.1 How GPS Works (Simplified)
+GPS receiver measures pseudorange (distance) to multiple satellites:
+
+ρ
+i
+=
+∣
+p
+E
+−
+s
+i
+E
+∣
++
+c
+Δ
+t
+u
++
+ϵ
+i
+ρ 
+i
+​
+ =∣p 
+E
+ −s 
+i
+E
+​
+ ∣+cΔt 
+u
+​
+ +ϵ 
+i
+​
+ 
+
+where:
+
+p
+E
+p 
+E
+  = your position in Earth-centered frame (unknown)
+s
+i
+E
+s 
+i
+E
+​
+  = satellite 
+i
+i position (known from broadcast)
+c
+Δ
+t
+u
+cΔt 
+u
+​
+  = clock bias error (speed of light × time error)
+ϵ
+i
+ϵ 
+i
+​
+  = noise (multipath, atmosphere, etc.)
+The process:
+
+Your drone listens to satellites broadcasting "I'm here, and my clock says it's exactly this time"
+Drone measures how long signals took to arrive (time × speed of light = distance)
+With 4+ satellites, it solves: "Where could I be such that I'm distance 
+ρ
+1
+ρ 
+1
+​
+  from satellite 1, 
+ρ
+2
+ρ 
+2
+​
+  from satellite 2, etc.?"
+Converts answer from "latitude/longitude" to "meters East/North/Up" relative to takeoff point using rotation 
+R
+E
+W
+R 
+E
+W
+​
+ 
+4.2 GPS in the Estimation Framework
+After conversion to local ENU frame:
+
+z
+k
+GPS
+=
+[
+x
+k
+W
+y
+k
+W
+z
+k
+W
+]
++
+v
+k
+GPS
+z 
+k
+GPS
+​
+ = 
+​
+  
+x 
+k
+W
+​
+ 
+y 
+k
+W
+​
+ 
+z 
+k
+W
+​
+ 
+​
+  
+​
+ +v 
+k
+GPS
+​
+ 
+
+where 
+v
+k
+GPS
+∼
+N
+(
+0
+,
+R
+GPS
+)
+v 
+k
+GPS
+​
+ ∼N(0,R 
+GPS
+​
+ ) with typical 
+R
+GPS
+R 
+GPS
+​
+  having 2-5m standard deviation.
+
+Matrix form in the filter: 
+z
+k
+GPS
+=
+H
+GPS
+ 
+x
+k
++
+v
+k
+GPS
+z 
+k
+GPS
+​
+ =H 
+GPS
+​
+ x 
+k
+​
+ +v 
+k
+GPS
+​
+ 
+
+where 
+H
+GPS
+=
+[
+I
+3
+0
+0
+⋯
+ 
+]
+H 
+GPS
+​
+ =[I 
+3
+​
+ 00⋯] selects position from full state.
+
+4.3 The Reality Check
+Errors creep in from:
+
+Signals bouncing off buildings (multipath)
+Atmosphere messing with signal speed
+Satellite positions not perfectly known
+Your receiver's clock being slightly off
+Result: typical accuracy is 2-5 meters horizontally, worse vertically.
+
+Key insight: GPS acts as a global anchor. While IMU drifts quadratically, GPS periodically resets the position estimate. The filter balances them based on their respective uncertainties (
+R
+GPS
+R 
+GPS
+​
+  vs prediction covariance).
+
+5. Odometry-Based Localization
+5.1 The Core Idea
+Odometry is dead reckoning: "I know where I started, and I've been keeping track of every move."
+
+The basic equation: 
+x
+k
++
+1
+=
+x
+k
++
+Δ
+x
+k
+x 
+k+1
+​
+ =x 
+k
+​
+ +Δx 
+k
+​
+ 
+
+Sounds great, but here's the problem: The Drift Monster.
+
+5.2 IMU Odometry: Fast but Drifty
+The core integration loop runs at 200-1000 Hz:
+
+Step 1: Update orientation from gyroscope
+
+First, bias-correct: 
+ω
+~
+k
+B
+=
+ω
+meas
+B
+−
+b
+^
+ω
+ω
+~
+  
+k
+B
+​
+ =ω 
+meas
+B
+​
+ − 
+b
+^
+  
+ω
+​
+ 
+
+Then integrate: 
+R
+k
++
+1
+=
+R
+k
+⋅
+exp
+⁡
+(
+[
+ω
+~
+k
+B
+Δ
+t
+]
+×
+)
+R 
+k+1
+​
+ =R 
+k
+​
+ ⋅exp([ 
+ω
+~
+  
+k
+B
+​
+ Δt] 
+×
+​
+ )
+
+Step 2: Transform accelerometer to world frame
+
+First, bias-correct: 
+f
+~
+k
+B
+=
+f
+meas
+B
+−
+b
+^
+a
+f
+~
+​
+  
+k
+B
+​
+ =f 
+meas
+B
+​
+ − 
+b
+^
+  
+a
+​
+ 
+
+Then transform: 
+a
+k
+W
+=
+R
+B
+W
+(
+f
+~
+k
+B
+)
++
+g
+W
+a 
+k
+W
+​
+ =R 
+B
+W
+​
+ ( 
+f
+~
+​
+  
+k
+B
+​
+ )+g 
+W
+ 
+
+Step 3: Integrate to get velocity and position 
+v
+k
++
+1
+W
+=
+v
+k
+W
++
+a
+k
+W
+Δ
+t
+v 
+k+1
+W
+​
+ =v 
+k
+W
+​
+ +a 
+k
+W
+​
+ Δt 
+p
+k
++
+1
+W
+=
+p
+k
+W
++
+v
+k
+W
+Δ
+t
++
+1
+2
+a
+k
+W
+(
+Δ
+t
+)
+2
+p 
+k+1
+W
+​
+ =p 
+k
+W
+​
+ +v 
+k
+W
+​
+ Δt+ 
+2
+1
+​
+ a 
+k
+W
+​
+ (Δt) 
+2
+ 
+
+5.3 Why IMU Drifts
+Imagine your accelerometer has a tiny 0.01 m/s² bias (barely noticeable):
+
+After 1 second:
+
+Velocity error: 
+δ
+v
+≈
+b
+⋅
+t
+=
+0.01
+×
+1
+=
+0.01
+δv≈b⋅t=0.01×1=0.01 m/s
+Position error: 
+δ
+p
+≈
+1
+2
+b
+⋅
+t
+2
+=
+0.5
+×
+0.01
+×
+1
+2
+=
+0.005
+δp≈ 
+2
+1
+​
+ b⋅t 
+2
+ =0.5×0.01×1 
+2
+ =0.005 m
+After 10 seconds:
+
+Velocity error: 
+δ
+v
+=
+0.1
+δv=0.1 m/s
+Position error: 
+δ
+p
+=
+0.5
+δp=0.5 m
+After 60 seconds:
+
+Velocity error: 
+δ
+v
+=
+0.6
+δv=0.6 m/s
+Position error: 
+δ
+p
+=
+18
+δp=18 m!
+Mathematical form:
+
+Velocity error grows linearly: 
+δ
+v
+(
+t
+)
+≈
+b
+⋅
+t
+δv(t)≈b⋅t
+Position error grows quadratically: 
+δ
+p
+(
+t
+)
+≈
+1
+2
+b
+⋅
+t
+2
+δp(t)≈ 
+2
+1
+​
+ b⋅t 
+2
+ 
+This is like compound interest, but for errors! Orientation errors also rotate gravity incorrectly, compounding the problem further.
+
+5.4 Visual Odometry: Environment Awareness
+VO estimates relative motion by minimizing reprojection error:
+
+min
+⁡
+R
+,
+t
+∑
+i
+∥
+π
+(
+R
+⋅
+P
+i
++
+t
+)
+−
+[
+u
+i
+′
+v
+i
+′
+]
+∥
+2
+min 
+R,t
+​
+ ∑ 
+i
+​
+  
+​
+ π(R⋅P 
+i
+​
+ +t)−[ 
+u 
+i
+′
+​
+ 
+v 
+i
+′
+​
+ 
+​
+ ] 
+​
+  
+2
+ 
+
+where:
+
+π
+(
+⋅
+)
+π(⋅) is camera projection function
+P
+i
+P 
+i
+​
+  are 3D points
+(
+u
+i
+′
+,
+v
+i
+′
+)
+(u 
+i
+′
+​
+ ,v 
+i
+′
+​
+ ) are observed pixel locations in frame 2
+Drift accumulation: Each relative transform 
+Δ
+T
+ΔT has small error. After 
+N
+N steps:
+
+T
+N
+=
+T
+0
+∏
+i
+=
+0
+N
+−
+1
+Δ
+T
+i
+T 
+N
+​
+ =T 
+0
+​
+ ∏ 
+i=0
+N−1
+​
+ ΔT 
+i
+​
+ 
+
+Errors multiply along the chain, causing drift. Like compounding interest, but for mistakes!
+
+5.5 Why Odometry Matters Despite Drift
+Because it's FAST and SMOOTH. Between GPS updates (which come once per second), IMU gives you hundreds of updates, keeping your estimate current. You just need GPS to occasionally reset the drift.
+
+The partnership:
+
+IMU provides shape and smoothness at high frequency
+GPS provides anchor and prevents long-term drift
+Together they give you the best of both worlds!
+6. Sensor Fusion: The Magic Glue
+6.1 The Problem Setup
+You have multiple "friends" (sensors) giving you hints:
+
+GPS says: "You're at position (5, 3, 2)" but only updates once per second
+IMU says: "You accelerated 1m/s² forward" 200 times per second, but drifts
+Barometer says: "You're at altitude 2.1m" but has slow drift
+Camera says: "You moved 0.3m right, 0.1m up" occasionally when features tracked well
+The question: What do you actually believe?
+
+6.2 The Bayesian Framework
+We want the belief (probability distribution) about the state, given all past measurements and control inputs. Let's denote:
+
+x
+k
+x 
+k
+​
+  = state at time 
+k
+k
+z
+1
+:
+k
+z 
+1:k
+​
+  = all measurements from time 1 to 
+k
+k
+u
+1
+:
+k
+u 
+1:k
+​
+  = all control inputs from time 1 to 
+k
+k
+We seek: probability of state 
+x
+k
+x 
+k
+​
+  given measurements 
+z
+1
+:
+k
+z 
+1:k
+​
+  and inputs 
+u
+1
+:
+k
+u 
+1:k
+​
+ 
+
+This is updated through two steps:
+
+PREDICT (using motion model):
+
+The prediction step computes: probability of 
+x
+k
+x 
+k
+​
+  given measurements up to 
+k
+−
+1
+k−1
+
+This involves integrating over all possible previous states, weighted by:
+
+How likely we transition from 
+x
+k
+−
+1
+x 
+k−1
+​
+  to 
+x
+k
+x 
+k
+​
+  (motion model)
+Our previous belief about 
+x
+k
+−
+1
+x 
+k−1
+​
+ 
+Translation: "Use my motion model to predict where I'll be, considering uncertainty in my previous state."
+
+UPDATE (using measurements):
+
+The update step computes: probability of 
+x
+k
+x 
+k
+​
+  given all measurements up to 
+k
+k
+
+This is proportional to:
+
+How likely we'd measure 
+z
+k
+z 
+k
+​
+  if state were 
+x
+k
+x 
+k
+​
+  (measurement model)
+Our predicted belief about 
+x
+k
+x 
+k
+​
+  (from prediction step)
+Translation: "Now that I have a new measurement, update my belief by comparing what I predicted vs what I actually saw."
+
+Think of it as: "Predict where you'll be based on motion, then correct based on what sensors actually see."
+
+6.3 Kalman Filter: When Everything is Nice and Linear
+For linear systems with Gaussian noise, the math becomes elegant!
+
+System models:
+
+Motion model: 
+x
+k
++
+1
+=
+F
+k
+x
+k
++
+G
+k
+u
+k
++
+w
+k
+x 
+k+1
+​
+ =F 
+k
+​
+ x 
+k
+​
+ +G 
+k
+​
+ u 
+k
+​
+ +w 
+k
+​
+  where 
+w
+k
+∼
+N
+(
+0
+,
+Q
+k
+)
+w 
+k
+​
+ ∼N(0,Q 
+k
+​
+ )
+
+Measurement model: 
+z
+k
+=
+H
+k
+x
+k
++
+v
+k
+z 
+k
+​
+ =H 
+k
+​
+ x 
+k
+​
+ +v 
+k
+​
+  where 
+v
+k
+∼
+N
+(
+0
+,
+R
+k
+)
+v 
+k
+​
+ ∼N(0,R 
+k
+​
+ )
+
+The filter maintains a Gaussian belief: 
+x
+k
+∼
+N
+(
+x
+^
+k
+∣
+k
+,
+P
+k
+∣
+k
+)
+x 
+k
+​
+ ∼N( 
+x
+^
+  
+k∣k
+​
+ ,P 
+k∣k
+​
+ )
+
+Prediction step (runs at IMU rate): 
+x
+^
+k
++
+1
+∣
+k
+=
+F
+k
+x
+^
+k
+∣
+k
++
+G
+k
+u
+k
+x
+^
+  
+k+1∣k
+​
+ =F 
+k
+​
+  
+x
+^
+  
+k∣k
+​
+ +G 
+k
+​
+ u 
+k
+​
+  
+P
+k
++
+1
+∣
+k
+=
+F
+k
+P
+k
+∣
+k
+F
+k
+T
++
+Q
+k
+P 
+k+1∣k
+​
+ =F 
+k
+​
+ P 
+k∣k
+​
+ F 
+k
+T
+​
+ +Q 
+k
+​
+ 
+
+Translation: "Propagate state forward using motion model. Uncertainty grows by 
+Q
+k
+Q 
+k
+​
+ ."
+
+Update step (when measurement arrives):
+
+Innovation (how different is measurement from prediction?): 
+y
+k
++
+1
+=
+z
+k
++
+1
+−
+H
+k
++
+1
+x
+^
+k
++
+1
+∣
+k
+y 
+k+1
+​
+ =z 
+k+1
+​
+ −H 
+k+1
+​
+  
+x
+^
+  
+k+1∣k
+​
+ 
+
+Kalman gain (how much to trust measurement vs prediction?): 
+K
+k
++
+1
+=
+P
+k
++
+1
+∣
+k
+H
+k
++
+1
+T
+(
+H
+k
++
+1
+P
+k
++
+1
+∣
+k
+H
+k
++
+1
+T
++
+R
+k
++
+1
+)
+−
+1
+K 
+k+1
+​
+ =P 
+k+1∣k
+​
+ H 
+k+1
+T
+​
+ (H 
+k+1
+​
+ P 
+k+1∣k
+​
+ H 
+k+1
+T
+​
+ +R 
+k+1
+​
+ ) 
+−1
+ 
+
+State update (blend prediction with measurement): 
+x
+^
+k
++
+1
+∣
+k
++
+1
+=
+x
+^
+k
++
+1
+∣
+k
++
+K
+k
++
+1
+y
+k
++
+1
+x
+^
+  
+k+1∣k+1
+​
+ = 
+x
+^
+  
+k+1∣k
+​
+ +K 
+k+1
+​
+ y 
+k+1
+​
+ 
+
+Covariance update (uncertainty decreases): 
+P
+k
++
+1
+∣
+k
++
+1
+=
+(
+I
+−
+K
+k
++
+1
+H
+k
++
+1
+)
+P
+k
++
+1
+∣
+k
+P 
+k+1∣k+1
+​
+ =(I−K 
+k+1
+​
+ H 
+k+1
+​
+ )P 
+k+1∣k
+​
+ 
+
+6.4 The Trust Game
+The Kalman gain 
+K
+K is the key to the trust game:
+
+Small 
+R
+R (trusted sensor):
+
+Sensor noise is small
+Innovation covariance 
+(
+H
+P
+H
+T
++
+R
+)
+(HPH 
+T
+ +R) is small
+K
+K becomes large
+Strong correction toward measurement
+"I trust this sensor, let me move my estimate toward it!"
+Large 
+R
+R (noisy sensor):
+
+Sensor noise is large
+Innovation covariance is large
+K
+K becomes small
+Gentle correction
+"This sensor is unreliable, I'll mostly stick with my prediction."
+Large 
+Q
+Q (uncertain model):
+
+Prediction uncertainty grows fast
+P
+k
+∣
+k
+−
+1
+P 
+k∣k−1
+​
+  becomes large
+Next update will have larger 
+K
+K
+Trust sensors more
+"My model is uncertain, please sensors, guide me!"
+This is the mathematical formulation of "combining testimonies from witnesses with different reliability."
+
+6.5 Extended Kalman Filter: When Reality is Nonlinear
+Drones are nonlinear! Motion involves rotations on SO(3), gravity projection, quaternion dynamics. Solution: linearize around current estimate.
+
+Nonlinear models: 
+x
+k
++
+1
+=
+f
+(
+x
+k
+,
+u
+k
+)
++
+w
+k
+x 
+k+1
+​
+ =f(x 
+k
+​
+ ,u 
+k
+​
+ )+w 
+k
+​
+  
+z
+k
+=
+h
+(
+x
+k
+)
++
+v
+k
+z 
+k
+​
+ =h(x 
+k
+​
+ )+v 
+k
+​
+ 
+
+where 
+f
+f and 
+h
+h are nonlinear functions.
+
+Linearization: Compute Jacobians at current estimate: 
+F
+k
+=
+∂
+f
+∂
+x
+∣
+x
+^
+k
+∣
+k
+,
+H
+k
+=
+∂
+h
+∂
+x
+∣
+x
+^
+k
+∣
+k
+F 
+k
+​
+ = 
+∂x
+∂f
+​
+  
+​
+  
+x
+^
+  
+k∣k
+​
+ 
+​
+ ,H 
+k
+​
+ = 
+∂x
+∂h
+​
+  
+​
+  
+x
+^
+  
+k∣k
+​
+ 
+​
+ 
+
+EKF algorithm:
+
+Nonlinear prediction: 
+x
+^
+k
++
+1
+∣
+k
+=
+f
+(
+x
+^
+k
+∣
+k
+,
+u
+k
+)
+x
+^
+  
+k+1∣k
+​
+ =f( 
+x
+^
+  
+k∣k
+​
+ ,u 
+k
+​
+ )
+
+Linearized covariance: 
+P
+k
++
+1
+∣
+k
+=
+F
+k
+P
+k
+∣
+k
+F
+k
+T
++
+Q
+k
+P 
+k+1∣k
+​
+ =F 
+k
+​
+ P 
+k∣k
+​
+ F 
+k
+T
+​
+ +Q 
+k
+​
+ 
+
+When measurement arrives:
+
+Predict measurement: 
+z
+^
+k
++
+1
+=
+h
+(
+x
+^
+k
++
+1
+∣
+k
+)
+z
+^
+  
+k+1
+​
+ =h( 
+x
+^
+  
+k+1∣k
+​
+ )
+Innovation: 
+y
+k
++
+1
+=
+z
+k
++
+1
+−
+z
+^
+k
++
+1
+y 
+k+1
+​
+ =z 
+k+1
+​
+ − 
+z
+^
+  
+k+1
+​
+ 
+Use linearized 
+H
+k
+H 
+k
+​
+  in standard Kalman update equations
+Typical drone state (16 variables): 
+x
+=
+[
+p
+W
+,
+v
+W
+,
+q
+W
+B
+,
+b
+a
+,
+b
+ω
+]
+T
+x=[p 
+W
+ ,v 
+W
+ ,q 
+WB
+ ,b 
+a
+​
+ ,b 
+ω
+​
+ ] 
+T
+ 
+
+p
+W
+p 
+W
+  (3): Position in world frame
+v
+W
+v 
+W
+  (3): Velocity in world frame
+q
+W
+B
+q 
+WB
+  (4): Orientation quaternion
+b
+a
+b 
+a
+​
+  (3): Accelerometer bias
+b
+ω
+b 
+ω
+​
+  (3): Gyroscope bias
+6.6 Multi-Rate Asynchronous Fusion
+The real magic: sensors run at different rates!
+
+Timeline example:
+
+t=0ms:    IMU predict
+t=5ms:    IMU predict  
+t=10ms:   IMU predict + Barometer update
+t=15ms:   IMU predict
+t=20ms:   IMU predict
+t=25ms:   IMU predict
+...
+t=100ms:  IMU predict + GPS update (big correction!)
+t=105ms:  IMU predict
+t=110ms:  IMU predict + Visual Odometry update
+t=115ms:  IMU predict
+...
+Implementation strategy:
+
+IMU drives predictions at high rate (200-1000 Hz) → keeps estimate current
+Each sensor updates whenever new data arrives (asynchronous)
+Updates can be processed sequentially (mathematically equivalent to stacked measurement under independence assumption)
+Example measurement models:
+
+GPS: 
+z
+GPS
+=
+[
+x
+W
+y
+W
+z
+W
+]
++
+v
+GPS
+z 
+GPS
+ = 
+​
+  
+x 
+W
+ 
+y 
+W
+ 
+z 
+W
+ 
+​
+  
+​
+ +v 
+GPS
+ 
+
+Barometer: 
+z
+baro
+=
+z
+W
++
+v
+baro
+z 
+baro
+ =z 
+W
+ +v 
+baro
+ 
+
+Magnetometer: 
+z
+mag
+=
+R
+W
+B
+(
+q
+)
+⋅
+B
+W
++
+v
+mag
+z 
+mag
+ =R 
+W
+B
+​
+ (q)⋅B 
+W
+ +v 
+mag
+ 
+
+Visual Odometry: 
+z
+VO
+=
+v
+W
++
+v
+VO
+(velocity form)
+z 
+VO
+ =v 
+W
+ +v 
+VO
+ (velocity form)
+
+6.7 The Result: A Beautiful Symphony
+You get an estimate that:
+
+✓ Updates at IMU rate (hundreds of Hz) → smooth for control loops
+
+✓ Stays globally accurate via GPS → no long-term drift
+
+✓ Adapts to sensor quality → if GPS degrades, automatically trust vision more
+
+✓ Robust to dropouts → if one sensor fails, others compensate
+
+✓ Quantifies uncertainty → covariance 
+P
+P tells you "how confident am I?"
+
+6.8 Covariance Tuning: The Art of Balance
+The key to making fusion work is tuning covariances:
+
+Process noise 
+Q
+Q:
+
+Represents: IMU quality, unmodeled dynamics, bias random walk
+Large 
+Q
+Q → "My model is uncertain, trust measurements more"
+Small 
+Q
+Q → "My model is good, don't overreact to noisy sensors"
+GPS noise 
+R
+GPS
+R 
+GPS
+​
+ :
+
+Open sky: Small 
+R
+R (2-3m std) → strong corrections
+Near buildings: Large 
+R
+R (10m std) → gentle corrections
+Complete dropout: Don't update at all
+Barometer noise 
+R
+baro
+R 
+baro
+​
+ :
+
+Typically small for relative altitude
+Account for slow drift
+Vision noise 
+R
+VO
+R 
+VO
+​
+ :
+
+Good features: Small 
+R
+R → trust it
+Poor tracking: Large 
+R
+R or reject measurement
+This tuning is part art, part science—learned through flight testing and simulation!
+
+Summary: The Big Picture
+Drone localization is like a detective solving "where am I?" using testimonies from unreliable witnesses:
+
+The Witnesses
+GPS = The wise elder who knows the big picture but speaks slowly
+
+Measurement: 
+z
+GPS
+=
+p
+W
++
+v
+GPS
+z 
+GPS
+ =p 
+W
+ +v 
+GPS
+ 
+Role: Global anchor, prevents long-term drift
+Update rate: 1-10 Hz
+Weakness: Slow, noisy (2-5m), fails indoors
+IMU = The hyperactive youngster with constant updates but faulty memory
+
+Motion model: 
+p
+k
++
+1
+=
+p
+k
++
+v
+k
+Δ
+t
++
+1
+2
+a
+k
+(
+Δ
+t
+)
+2
+p 
+k+1
+​
+ =p 
+k
+​
+ +v 
+k
+​
+ Δt+ 
+2
+1
+​
+ a 
+k
+​
+ (Δt) 
+2
+ 
+Role: High-rate smooth prediction
+Update rate: 200-1000 Hz
+Weakness: Drifts quadratically (
+∼
+t
+2
+∼t 
+2
+ ) over time
+Vision/LiDAR = The observant detective watching the environment
+
+Measurement: Relative motion 
+Δ
+T
+ΔT or velocity 
+v
+W
+v 
+W
+ 
+Role: Local corrections, enables GPS-denied operation
+Update rate: 10-30 Hz
+Weakness: Environment-dependent, also drifts
+The Smart Detective (EKF)
+Framework: 
+x
+^
+k
++
+1
+=
+f
+(
+x
+^
+k
+,
+u
+k
+)
+⏟
+Predict with IMU
++
+K
+⋅
+(
+z
+−
+h
+(
+x
+^
+)
+)
+⏟
+Correct with measurement
+x
+^
+  
+k+1
+​
+ = 
+Predict with IMU
+f( 
+x
+^
+  
+k
+​
+ ,u 
+k
+​
+ )
+​
+ 
+​
+ + 
+Correct with measurement
+K⋅(z−h( 
+x
+^
+ ))
+​
+ 
+​
+ 
+
+How it works:
+
+Predict: Use IMU to propagate state forward at high rate
+Trust: Compute Kalman gain 
+K
+K based on uncertainties (
+P
+P, 
+Q
+Q, 
+R
+R)
+Update: When sensor data arrives, blend prediction with measurement
+Adapt: Automatically adjust trust based on sensor quality
+Result: Fast, accurate, robust estimate that no single sensor could provide!
+
+The Three Techniques Working Together
+GPS (absolute reference)
+    ↓ [corrects long-term drift]
+    ↓
+Sensor Fusion (EKF) ←→ [provides smooth high-rate estimate]
+    ↑
+    ↑ [provides short-term motion]
+Odometry (IMU/Vision/LiDAR)
+GPS prevents long-term drift (absolute reference, but slow) ↕ Sensor Fusion intelligently combines everything (optimal blending via Kalman gain) ↕ Odometry provides high-rate smooth estimates (relative motion, but drifts)
+
+Why Modern Drones Fly Reliably
+Because they:
+
+Don't trust any single sensor → each has weaknesses
+Blend imperfect information mathematically → EKF provides optimal fusion
+Adapt in real-time → adjust trust based on conditions
+Maintain uncertainty → know when they're confident vs uncertain
+The bottom line: Turn a collection of noisy, biased, partial observations into a single coherent understanding of "where am I and how am I moving" that's accurate enough to land on a moving target!
+
+This is the magic of sensor fusion—transforming unreliable pieces into something remarkably reliable! 🚁

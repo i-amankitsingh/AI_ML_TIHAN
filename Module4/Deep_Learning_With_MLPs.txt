@@ -1,0 +1,4399 @@
+Deep Learning with MLPs Notes
+1. Implementing a Simple MLP in PyTorch (Conceptual View)
+In this section, imagine Jack wants to build a very simple image classifier using a Multi-Layer Perceptron (MLP) in PyTorch.
+We will not write code yet – we’ll focus on what the code means mathematically and how the pieces fit together.
+
+1.1 From a Single Neuron to a Multi-Layer Perceptron
+A single neuron takes an input vector 
+x
+∈
+R
+d
+x∈R 
+d
+ , multiplies by weights, adds a bias, and passes it through a non-linear function.
+
+Mathematically, for one neuron:
+
+z
+=
+w
+⊤
+x
++
+b
+,
+z=w 
+⊤
+ x+b,
+then an activation function 
+σ
+(
+⋅
+)
+σ(⋅) (like ReLU or sigmoid) gives
+
+h
+=
+σ
+(
+z
+)
+.
+h=σ(z).
+x
+=
+(
+x
+1
+,
+x
+2
+,
+…
+,
+x
+d
+)
+⊤
+x=(x 
+1
+​
+ ,x 
+2
+​
+ ,…,x 
+d
+​
+ ) 
+⊤
+ : input feature vector
+w
+=
+(
+w
+1
+,
+w
+2
+,
+…
+,
+w
+d
+)
+⊤
+w=(w 
+1
+​
+ ,w 
+2
+​
+ ,…,w 
+d
+​
+ ) 
+⊤
+ : weight vector
+b
+b: bias term
+z
+z: pre-activation (linear part)
+h
+h: output of the neuron (after activation)
+Now Jack stacks many neurons in parallel to form a layer. Suppose the hidden layer has 
+H
+H neurons.
+Instead of writing each neuron separately, we use matrices:
+
+Weight matrix: 
+W
+(
+1
+)
+∈
+R
+H
+×
+d
+W 
+(1)
+ ∈R 
+H×d
+ 
+Bias vector: 
+b
+(
+1
+)
+∈
+R
+H
+b 
+(1)
+ ∈R 
+H
+ 
+For an input 
+x
+∈
+R
+d
+x∈R 
+d
+ , the hidden layer computes:
+
+z
+(
+1
+)
+=
+W
+(
+1
+)
+x
++
+b
+(
+1
+)
+∈
+R
+H
+,
+z 
+(1)
+ =W 
+(1)
+ x+b 
+(1)
+ ∈R 
+H
+ ,
+h
+(
+1
+)
+=
+σ
+(
+z
+(
+1
+)
+)
+.
+h 
+(1)
+ =σ(z 
+(1)
+ ).
+This is one hidden layer.
+An MLP simply stacks several such layers, one after another.
+
+1.2 Defining the MLP Architecture (Layers + Activations)
+Jack now wants an MLP with:
+
+Input dimension: 
+d
+d
+Two hidden layers with sizes 
+H
+1
+H 
+1
+​
+  and 
+H
+2
+H 
+2
+​
+ 
+Output dimension: 
+K
+K (number of classes)
+The architecture is:
+
+Layer 1 (Input → Hidden 1)
+
+Weights: 
+W
+(
+1
+)
+∈
+R
+H
+1
+×
+d
+W 
+(1)
+ ∈R 
+H 
+1
+​
+ ×d
+ 
+Bias: 
+b
+(
+1
+)
+∈
+R
+H
+1
+b 
+(1)
+ ∈R 
+H 
+1
+​
+ 
+ 
+Activation: e.g. ReLU
+Layer 2 (Hidden 1 → Hidden 2)
+
+Weights: 
+W
+(
+2
+)
+∈
+R
+H
+2
+×
+H
+1
+W 
+(2)
+ ∈R 
+H 
+2
+​
+ ×H 
+1
+​
+ 
+ 
+Bias: 
+b
+(
+2
+)
+∈
+R
+H
+2
+b 
+(2)
+ ∈R 
+H 
+2
+​
+ 
+ 
+Activation: e.g. ReLU
+Layer 3 (Hidden 2 → Output)
+
+Weights: 
+W
+(
+3
+)
+∈
+R
+K
+×
+H
+2
+W 
+(3)
+ ∈R 
+K×H 
+2
+​
+ 
+ 
+Bias: 
+b
+(
+3
+)
+∈
+R
+K
+b 
+(3)
+ ∈R 
+K
+ 
+No activation at the end if we use cross-entropy loss
+(the output is logits)
+For one input 
+x
+∈
+R
+d
+x∈R 
+d
+ :
+
+First hidden layer:
+
+z
+(
+1
+)
+=
+W
+(
+1
+)
+x
++
+b
+(
+1
+)
+,
+h
+(
+1
+)
+=
+σ
+(
+z
+(
+1
+)
+)
+,
+h
+(
+1
+)
+∈
+R
+H
+1
+.
+z 
+(1)
+ =W 
+(1)
+ x+b 
+(1)
+ ,h 
+(1)
+ =σ(z 
+(1)
+ ),h 
+(1)
+ ∈R 
+H 
+1
+​
+ 
+ .
+Second hidden layer:
+
+z
+(
+2
+)
+=
+W
+(
+2
+)
+h
+(
+1
+)
++
+b
+(
+2
+)
+,
+h
+(
+2
+)
+=
+σ
+(
+z
+(
+2
+)
+)
+,
+h
+(
+2
+)
+∈
+R
+H
+2
+.
+z 
+(2)
+ =W 
+(2)
+ h 
+(1)
+ +b 
+(2)
+ ,h 
+(2)
+ =σ(z 
+(2)
+ ),h 
+(2)
+ ∈R 
+H 
+2
+​
+ 
+ .
+Output layer (logits):
+
+z
+(
+3
+)
+=
+W
+(
+3
+)
+h
+(
+2
+)
++
+b
+(
+3
+)
+,
+z
+(
+3
+)
+∈
+R
+K
+.
+z 
+(3)
+ =W 
+(3)
+ h 
+(2)
+ +b 
+(3)
+ ,z 
+(3)
+ ∈R 
+K
+ .
+z
+(
+3
+)
+z 
+(3)
+  are logits (raw scores for each class).
+Softmax is conceptually applied later by the loss function during training.
+This chain of transformations is what Jack’s forward() function in PyTorch will implement internally.
+
+1.3 Forward Pass: Math vs Conceptual PyTorch forward()
+Think of the forward pass as a pipeline:
+
+Take input 
+x
+x.
+Pass through Layer 1 → get 
+h
+(
+1
+)
+h 
+(1)
+ .
+Pass 
+h
+(
+1
+)
+h 
+(1)
+  through Layer 2 → get 
+h
+(
+2
+)
+h 
+(2)
+ .
+Pass 
+h
+(
+2
+)
+h 
+(2)
+  through Layer 3 → get logits 
+z
+(
+3
+)
+z 
+(3)
+ .
+Mathematically, we can combine it as a function:
+
+f
+(
+x
+)
+=
+W
+(
+3
+)
+ 
+σ
+ ⁣
+(
+W
+(
+2
+)
+ 
+σ
+ ⁣
+(
+W
+(
+1
+)
+x
++
+b
+(
+1
+)
+)
++
+b
+(
+2
+)
+)
++
+b
+(
+3
+)
+.
+f(x)=W 
+(3)
+ σ(W 
+(2)
+ σ(W 
+(1)
+ x+b 
+(1)
+ )+b 
+(2)
+ )+b 
+(3)
+ .
+This 
+f
+(
+x
+)
+f(x) is exactly what a PyTorch forward(self, x) would compute.
+
+In PyTorch, each nn.Linear corresponds to one 
+W
+(
+ℓ
+)
+,
+b
+(
+ℓ
+)
+W 
+(ℓ)
+ ,b 
+(ℓ)
+  pair.
+Each activation (like ReLU) corresponds to applying 
+σ
+(
+⋅
+)
+σ(⋅) to the pre-activations.
+The final output is a tensor of shape 
+(
+K
+,
+)
+(K,) for one sample or 
+(
+batch_size
+,
+K
+)
+(batch_size,K) for a batch.
+So when Jack writes a model class in PyTorch and defines some layers, the mathematical meaning is exactly these matrix multiplications and non-linearities.
+
+1.4 Input and Output Shapes for MNIST-Style Classification
+To make this concrete, consider the MNIST digit dataset:
+
+Each image is 
+28
+×
+28
+28×28 pixels, grayscale.
+There are 10 classes (digits 0 to 9).
+1.4.1 Flattening the Input
+Jack has an image:
+
+As a matrix: 
+X
+∈
+R
+28
+×
+28
+X∈R 
+28×28
+ .
+The MLP expects a vector 
+x
+∈
+R
+d
+x∈R 
+d
+ .
+So he flattens the image:
+
+d
+=
+28
+×
+28
+=
+784
+,
+d=28×28=784,
+x
+=
+reshape
+(
+X
+)
+∈
+R
+784
+.
+x=reshape(X)∈R 
+784
+ .
+For a batch of 
+B
+B images, the input shape is:
+
+X
+batch
+∈
+R
+B
+×
+784
+.
+X 
+batch
+​
+ ∈R 
+B×784
+ .
+1.4.2 Shape Flow Through the Network
+Suppose Jack chooses:
+
+Input dimension: 
+d
+=
+784
+d=784
+Hidden sizes: 
+H
+1
+=
+128
+H 
+1
+​
+ =128, 
+H
+2
+=
+64
+H 
+2
+​
+ =64
+Output classes: 
+K
+=
+10
+K=10
+Then for a batch of size 
+B
+B:
+
+Input:
+
+X
+∈
+R
+B
+×
+784
+.
+X∈R 
+B×784
+ .
+After Layer 1 (Input → Hidden 1):
+
+Z
+(
+1
+)
+=
+X
+(
+W
+(
+1
+)
+)
+⊤
++
+b
+(
+1
+)
+⇒
+Z
+(
+1
+)
+∈
+R
+B
+×
+128
+,
+Z 
+(1)
+ =X(W 
+(1)
+ ) 
+⊤
+ +b 
+(1)
+ ⇒Z 
+(1)
+ ∈R 
+B×128
+ ,
+H
+(
+1
+)
+=
+σ
+(
+Z
+(
+1
+)
+)
+∈
+R
+B
+×
+128
+.
+H 
+(1)
+ =σ(Z 
+(1)
+ )∈R 
+B×128
+ .
+After Layer 2 (Hidden 1 → Hidden 2):
+
+Z
+(
+2
+)
+=
+H
+(
+1
+)
+(
+W
+(
+2
+)
+)
+⊤
++
+b
+(
+2
+)
+⇒
+Z
+(
+2
+)
+∈
+R
+B
+×
+64
+,
+Z 
+(2)
+ =H 
+(1)
+ (W 
+(2)
+ ) 
+⊤
+ +b 
+(2)
+ ⇒Z 
+(2)
+ ∈R 
+B×64
+ ,
+H
+(
+2
+)
+=
+σ
+(
+Z
+(
+2
+)
+)
+∈
+R
+B
+×
+64
+.
+H 
+(2)
+ =σ(Z 
+(2)
+ )∈R 
+B×64
+ .
+After Output Layer (Hidden 2 → Output logits):
+
+Z
+(
+3
+)
+=
+H
+(
+2
+)
+(
+W
+(
+3
+)
+)
+⊤
++
+b
+(
+3
+)
+⇒
+Z
+(
+3
+)
+∈
+R
+B
+×
+10
+.
+Z 
+(3)
+ =H 
+(2)
+ (W 
+(3)
+ ) 
+⊤
+ +b 
+(3)
+ ⇒Z 
+(3)
+ ∈R 
+B×10
+ .
+Here:
+
+Z
+(
+3
+)
+Z 
+(3)
+  are the logits for each class.
+For each input image in the batch, we get a vector of length 10.
+1.4.3 From Logits to Predicted Class
+Conceptually, the softmax function converts logits to class probabilities.
+For one sample with logits 
+z
+(
+3
+)
+∈
+R
+10
+z 
+(3)
+ ∈R 
+10
+ :
+
+p
+k
+=
+exp
+⁡
+(
+z
+k
+(
+3
+)
+)
+∑
+j
+=
+1
+10
+exp
+⁡
+(
+z
+j
+(
+3
+)
+)
+,
+k
+=
+1
+,
+…
+,
+10.
+p 
+k
+​
+ = 
+∑ 
+j=1
+10
+​
+ exp(z 
+j
+(3)
+​
+ )
+exp(z 
+k
+(3)
+​
+ )
+​
+ ,k=1,…,10.
+The predicted class is:
+
+y
+^
+=
+arg
+⁡
+max
+⁡
+k
+  
+p
+k
+.
+y
+^
+​
+ =arg 
+k
+max
+​
+ p 
+k
+​
+ .
+In PyTorch training, the cross-entropy loss internally combines softmax with the negative log-likelihood, so Jack does not need to write softmax manually in the model for training.
+
+Summary
+
+An MLP is built by stacking linear layers and non-linear activations.
+Each nn.Linear corresponds to a matrix–vector operation 
+W
+x
++
+b
+Wx+b.
+For MNIST, inputs are flattened from 
+28
+×
+28
+28×28 to 
+784
+784-dimensional vectors.
+The final layer outputs logits of dimension equal to the number of classes (e.g., 10).
+In the next section, we will see how Jack actually trains this MLP:
+what loss function he uses, how the optimizer works, and what a single training epoch looks like.
+
+2. Training Loop for MLPs: Loss, Optimizer, and One Epoch
+Now that Jack has defined his MLP architecture, he needs to train it.
+Training means: “adjust the weights and biases so that the network’s predictions match the true labels as well as possible.”
+
+To do this, Jack needs:
+
+A loss function (how wrong the network is).
+An optimizer (how to update parameters).
+A training loop that repeats these steps for many mini-batches and many epochs.
+2.1 Loss Function: Measuring How Wrong the MLP Is
+Jack is doing multi-class classification, for example on MNIST (10 digits).
+For each input image, the MLP outputs logits:
+
+z
+(
+3
+)
+∈
+R
+K
+,
+z 
+(3)
+ ∈R 
+K
+ ,
+where 
+K
+K is the number of classes (e.g., 
+K
+=
+10
+K=10).
+
+To convert logits to probabilities, we conceptually use the softmax function:
+
+p
+k
+=
+exp
+⁡
+(
+z
+k
+(
+3
+)
+)
+∑
+j
+=
+1
+K
+exp
+⁡
+(
+z
+j
+(
+3
+)
+)
+,
+k
+=
+1
+,
+2
+,
+…
+,
+K
+.
+p 
+k
+​
+ = 
+j=1
+∑
+K
+​
+ exp(z 
+j
+(3)
+​
+ )
+exp(z 
+k
+(3)
+​
+ )
+​
+ ,k=1,2,…,K.
+Let the true label be represented as a one-hot vector
+y
+=
+(
+y
+1
+,
+…
+,
+y
+K
+)
+⊤
+y=(y 
+1
+​
+ ,…,y 
+K
+​
+ ) 
+⊤
+ , where
+
+y
+k
+⋆
+=
+1
+y 
+k 
+⋆
+ 
+​
+ =1 for the correct class 
+k
+⋆
+k 
+⋆
+ ,
+y
+k
+=
+0
+y 
+k
+​
+ =0 for all other classes.
+The cross-entropy loss for one sample is:
+
+L
+(
+z
+(
+3
+)
+,
+y
+)
+=
+−
+∑
+k
+=
+1
+K
+y
+k
+log
+⁡
+p
+k
+.
+L(z 
+(3)
+ ,y)=− 
+k=1
+∑
+K
+​
+ y 
+k
+​
+ logp 
+k
+​
+ .
+Because only the correct class 
+k
+⋆
+k 
+⋆
+  has 
+y
+k
+⋆
+=
+1
+y 
+k 
+⋆
+ 
+​
+ =1, this simplifies to:
+
+L
+(
+z
+(
+3
+)
+,
+y
+)
+=
+−
+log
+⁡
+p
+k
+⋆
+.
+L(z 
+(3)
+ ,y)=−logp 
+k 
+⋆
+ 
+​
+ .
+Intuition for Jack:
+
+If the MLP assigns high probability to the correct class, 
+p
+k
+⋆
+≈
+1
+p 
+k 
+⋆
+ 
+​
+ ≈1, then 
+−
+log
+⁡
+p
+k
+⋆
+−logp 
+k 
+⋆
+ 
+​
+  is small.
+If the MLP assigns low probability to the correct class, 
+p
+k
+⋆
+p 
+k 
+⋆
+ 
+​
+  is small and the loss is large.
+For a mini-batch of size 
+B
+B, the average loss is:
+
+L
+batch
+=
+1
+B
+∑
+i
+=
+1
+B
+L
+(
+z
+i
+(
+3
+)
+,
+y
+i
+)
+.
+L 
+batch
+​
+ = 
+B
+1
+​
+  
+i=1
+∑
+B
+​
+ L(z 
+i
+(3)
+​
+ ,y 
+i
+​
+ ).
+Jack’s goal in training is to minimize this loss over all parameters of the MLP.
+
+2.2 Optimizer: How Parameters Are Updated
+Let 
+θ
+θ denote all parameters of the MLP: Let 
+θ
+θ denote all parameters of the MLP:
+
+θ
+=
+{
+W
+(
+1
+)
+,
+b
+(
+1
+)
+,
+W
+(
+2
+)
+,
+b
+(
+2
+)
+,
+W
+(
+3
+)
+,
+b
+(
+3
+)
+}
+.
+θ={W 
+(1)
+ ,b 
+(1)
+ ,W 
+(2)
+ ,b 
+(2)
+ ,W 
+(3)
+ ,b 
+(3)
+ }.
+Training is an optimization problem:
+
+min
+⁡
+θ
+  
+E
+(
+x
+,
+y
+)
+[
+L
+(
+f
+θ
+(
+x
+)
+,
+y
+)
+]
+.
+θ
+min
+​
+ E 
+(x,y)
+​
+ [L(f 
+θ
+​
+ (x),y)].
+In practice, Jack approximates the expectation using batches from the dataset and uses gradient-based methods.
+
+2.2.1 Basic Gradient Descent Idea
+For a given batch, Jack computes the gradient of the batch loss:
+
+∇
+θ
+L
+batch
+.
+∇ 
+θ
+​
+ L 
+batch
+​
+ .
+Then he updates the parameters in the opposite direction of the gradient:
+
+θ
+new
+=
+θ
+old
+−
+η
+ 
+∇
+θ
+L
+batch
+,
+θ 
+new
+​
+ =θ 
+old
+​
+ −η∇ 
+θ
+​
+ L 
+batch
+​
+ ,
+where 
+η
+>
+0
+η>0 is the learning rate.
+
+If 
+η
+η is too large, updates can overshoot and training may diverge.
+If 
+η
+η is too small, training becomes very slow.
+2.2.2 SGD vs Adam (Conceptual)
+Stochastic Gradient Descent (SGD): uses the current batch gradient directly in the update.
+Adam: adapts the learning rate per parameter using moving averages of gradients and squared gradients.
+Jack can think of Adam as a “smarter” optimizer that often works well out of the box, especially for beginners.
+
+2.3 Mini-Batch Training: Why We Use Batches
+Jack’s whole training dataset is:
+
+D
+=
+{
+(
+x
+i
+,
+y
+i
+)
+}
+i
+=
+1
+N
+.
+D={(x 
+i
+​
+ ,y 
+i
+​
+ )} 
+i=1
+N
+​
+ .
+Computing the gradient on all 
+N
+N samples at once (full-batch gradient descent) would be:
+
+∇
+θ
+L
+full
+=
+1
+N
+∑
+i
+=
+1
+N
+∇
+θ
+L
+(
+f
+θ
+(
+x
+i
+)
+,
+y
+i
+)
+,
+∇ 
+θ
+​
+ L 
+full
+​
+ = 
+N
+1
+​
+  
+i=1
+∑
+N
+​
+ ∇ 
+θ
+​
+ L(f 
+θ
+​
+ (x 
+i
+​
+ ),y 
+i
+​
+ ),
+which is often too slow and memory expensive.
+
+Instead, Jack splits the data into mini-batches:
+
+Batch size: 
+B
+B (e.g., 
+B
+=
+32
+B=32 or 
+64
+64)
+Number of batches per epoch: 
+N
+B
+B
+N
+​
+  (approximately)
+For each batch 
+B
+t
+B 
+t
+​
+ , he computes:
+
+L
+batch
+(
+t
+)
+=
+1
+B
+∑
+i
+∈
+B
+t
+L
+(
+f
+θ
+(
+x
+i
+)
+,
+y
+i
+)
+,
+L 
+batch
+(t)
+​
+ = 
+B
+1
+​
+  
+i∈B 
+t
+​
+ 
+∑
+​
+ L(f 
+θ
+​
+ (x 
+i
+​
+ ),y 
+i
+​
+ ),
+and then its gradient:
+
+∇
+θ
+L
+batch
+(
+t
+)
+.
+∇ 
+θ
+​
+ L 
+batch
+(t)
+​
+ .
+Key ideas for Jack:
+
+Mini-batch gradient is a noisy estimate of the full gradient.
+But this noise is actually helpful: it can help escape poor local minima and saddle points.
+Using batches also makes it possible to use GPU parallelism efficiently.
+In PyTorch, the DataLoader object conceptually does this:
+
+Splits dataset into chunks of size 
+B
+B.
+Shuffles the order of samples each epoch.
+Feeds batches to the training loop one by one.
+2.4 One Training Epoch: Step-by-Step (Conceptual)
+An epoch means: Jack has gone through the entire training dataset once.
+
+Here is what happens during one epoch conceptually:
+
+Set the model to training mode.
+
+This ensures that layers like dropout and batch normalization (if used) behave correctly for training.
+Shuffle the training dataset.
+
+So that batches are different each epoch.
+This avoids the model seeing the data in exactly the same order forever.
+For each mini-batch 
+B
+t
+B 
+t
+​
+ :
+
+Take input batch 
+X
+t
+X 
+t
+​
+  and labels 
+Y
+t
+Y 
+t
+​
+ .
+Forward pass:
+Compute predictions (logits)
+Z
+t
+(
+3
+)
+=
+f
+θ
+(
+X
+t
+)
+.
+Z 
+t
+(3)
+​
+ =f 
+θ
+​
+ (X 
+t
+​
+ ).
+Compute batch loss:
+Using cross-entropy
+L
+t
+=
+L
+batch
+(
+t
+)
+.
+L 
+t
+​
+ =L 
+batch
+(t)
+​
+ .
+Zero out previous gradients.
+Before computing new gradients, Jack clears old ones so they don’t accumulate.
+Backward pass:
+Compute gradients
+∇
+θ
+L
+t
+.
+∇ 
+θ
+​
+ L 
+t
+​
+ .
+Optimizer step:
+Update parameters using the chosen optimizer (e.g., SGD or Adam)
+θ
+←
+θ
+−
+η
+ 
+∇
+θ
+L
+t
+θ←θ−η∇ 
+θ
+​
+ L 
+t
+​
+ 
+(for SGD; Adam has a more complex rule, but the idea is similar).
+Optionally, record the batch loss to monitor training progress.
+End of epoch:
+
+Jack can compute the average training loss over all batches.
+He then evaluates the model on the validation set (without updating parameters) to check how well it generalizes.
+Summary
+
+The loss function (cross-entropy) measures how far the MLP’s predictions are from the true labels.
+The optimizer uses gradients to update the parameters 
+θ
+θ in a direction that reduces the loss.
+Mini-batch training makes learning efficient and introduces useful stochasticity.
+One training epoch is a repeated loop over all mini-batches: forward → loss → backward → update.
+In the next section, we will look more closely at the hyperparameters Jack can adjust (learning rate, batch size, hidden sizes, number of epochs) and how they affect training.
+
+3. Hyperparameters: The Knobs You Control in MLP Training
+Jack has now built and trained an MLP, but there is still a big question:
+
+“How do I choose the learning rate, batch size, number of epochs, and hidden layer sizes?”
+
+These choices are called hyperparameters.
+They are not learned automatically from data; Jack must set them before training.
+
+Typical hyperparameters for an MLP:
+
+Learning rate 
+η
+η
+Batch size 
+B
+B
+Number of epochs 
+E
+E
+Hidden layer sizes (
+H
+1
+,
+H
+2
+,
+…
+H 
+1
+​
+ ,H 
+2
+​
+ ,…) and number of layers
+Dropout rate 
+p
+p (we will discuss dropout later)
+You can think of them as control knobs on a machine. Turning them changes how the learning process behaves.
+
+3.1 Learning Rate: How Big Each Step Is
+The learning rate 
+η
+η controls how big a step Jack takes in the parameter space during each update.
+
+Recall the gradient descent update (conceptual form):
+
+θ
+new
+=
+θ
+old
+−
+η
+ 
+∇
+θ
+L
+batch
+,
+θ 
+new
+​
+ =θ 
+old
+​
+ −η∇ 
+θ
+​
+ L 
+batch
+​
+ ,
+where:
+
+θ
+θ = all parameters of the MLP
+∇
+θ
+L
+batch
+∇ 
+θ
+​
+ L 
+batch
+​
+  = gradient of the loss on the current batch
+η
+>
+0
+η>0 = learning rate
+3.1.1 Too Large Learning Rate
+If 
+η
+η is too large:
+
+The update jumps too far in parameter space.
+The loss may oscillate or even diverge (become very large).
+On a simple 1D loss curve, instead of moving steadily downhill, Jack keeps overshooting the minimum:
+θ
+new
+≈
+θ
+old
+−
+η
+⋅
+(
+steep gradient
+)
+,
+θ 
+new
+​
+ ≈θ 
+old
+​
+ −η⋅(steep gradient),
+and this jump can take 
+θ
+new
+θ 
+new
+​
+  to a region where the loss is actually higher.
+
+Symptoms Jack might see:
+
+Training loss does not decrease smoothly.
+Sometimes it even explodes (goes to very large values or NaN).
+3.1.2 Too Small Learning Rate
+If 
+η
+η is too small:
+
+The steps are tiny.
+Training becomes very slow; loss decreases, but very gradually.
+Jack might run many epochs and still not reach a good minimum.
+Mathematically, if 
+η
+η is very small:
+
+θ
+new
+≈
+θ
+old
+−
+(tiny number)
+⋅
+∇
+θ
+L
+,
+θ 
+new
+​
+ ≈θ 
+old
+​
+ −(tiny number)⋅∇ 
+θ
+​
+ L,
+so each update barely moves 
+θ
+θ.
+
+Symptoms:
+
+Training loss decreases, but extremely slowly.
+Jack needs many epochs to get reasonable performance.
+3.1.3 Reasonable Learning Rate (Beginner Intuition)
+Jack wants 
+η
+η to be large enough to make progress, but small enough to remain stable.
+
+Beginner strategy:
+
+Start with a value like 
+η
+=
+10
+−
+3
+η=10 
+−3
+  (for Adam) or 
+η
+=
+10
+−
+2
+η=10 
+−2
+  (for simple SGD, depending on problem).
+Watch the training loss curve:
+If loss is unstable or diverging → decrease 
+η
+η.
+If loss decreases very slowly and remains high → increase 
+η
+η a bit.
+3.2 Batch Size and Number of Epochs
+3.2.1 Batch Size 
+B
+B
+Batch size is how many samples Jack uses to compute one gradient update.
+
+Small 
+B
+B (e.g., 
+16
+16 or 
+32
+32):
+
+Gradients are noisy but cheap to compute.
+Each epoch has more updates (more parameter updates per pass).
+Can help generalization (noise sometimes helps escape poor local minima).
+Large 
+B
+B (e.g., 
+256
+256 or 
+512
+512 or more):
+
+Gradients are less noisy (better approximation to the full dataset gradient).
+Each epoch has fewer updates.
+Requires more memory on GPU.
+If the training set has 
+N
+N samples and batch size is 
+B
+B, then the number of batches in one epoch is approximately:
+
+steps per epoch
+≈
+⌈
+N
+B
+⌉
+.
+steps per epoch≈⌈ 
+B
+N
+​
+ ⌉.
+Trade-off intuition for Jack:
+
+Very small 
+B
+B: fast updates but high noise; may be unstable.
+Very large 
+B
+B: smoother updates but can be slower per step and require more memory.
+Beginner choice: 
+B
+∈
+[
+32
+,
+128
+]
+B∈[32,128], depending on memory.
+
+3.2.2 Number of Epochs 
+E
+E
+One epoch means using each training sample once (roughly) to update the model.
+
+If Jack trains for too few epochs:
+
+The model may underfit (has not seen enough data to learn patterns).
+Training and validation losses are both relatively high.
+If he trains for too many epochs:
+
+The model may start to overfit (memorizing training data).
+Training loss continues to go down, but validation loss starts to increase.
+So the number of epochs 
+E
+E controls how long the MLP is allowed to learn.
+
+We can visualize this (conceptually):
+
+Early epochs: both training and validation loss go down.
+Middle epochs: training loss is low, validation loss is also low (good generalization).
+Later epochs: training loss may keep decreasing, but validation loss starts to increase (overfitting).
+Jack will later use early stopping (Section 5) to automatically decide when to stop.
+
+3.3 Hidden Size and Number of Layers: Model Capacity
+Now Jack must choose:
+
+How many hidden layers (depth).
+How many neurons in each layer (width).
+Let us denote a 2-hidden-layer MLP with:
+
+Input dimension 
+d
+d
+Hidden sizes 
+H
+1
+H 
+1
+​
+  and 
+H
+2
+H 
+2
+​
+ 
+Output dimension 
+K
+K
+The number of learnable parameters (weights and biases) is:
+
+Layer 1 (input 
+→
+→ hidden1):
+
+#params
+1
+=
+H
+1
+⋅
+d
++
+H
+1
+#params 
+1
+​
+ =H 
+1
+​
+ ⋅d+H 
+1
+​
+ 
+(weights + biases)
+
+Layer 2 (hidden1 
+→
+→ hidden2):
+
+#params
+2
+=
+H
+2
+⋅
+H
+1
++
+H
+2
+#params 
+2
+​
+ =H 
+2
+​
+ ⋅H 
+1
+​
+ +H 
+2
+​
+ 
+Layer 3 (hidden2 
+→
+→ output):
+
+#params
+3
+=
+K
+⋅
+H
+2
++
+K
+#params 
+3
+​
+ =K⋅H 
+2
+​
+ +K
+Total parameters:
+
+#params
+total
+=
+(
+H
+1
+d
++
+H
+1
+)
++
+(
+H
+2
+H
+1
++
+H
+2
+)
++
+(
+K
+H
+2
++
+K
+)
+.
+#params 
+total
+​
+ =(H 
+1
+​
+ d+H 
+1
+​
+ )+(H 
+2
+​
+ H 
+1
+​
+ +H 
+2
+​
+ )+(KH 
+2
+​
+ +K).
+This gives a sense of the capacity of the model.
+
+3.3.1 Too Small Model (Under-parameterized)
+If 
+H
+1
+,
+H
+2
+H 
+1
+​
+ ,H 
+2
+​
+  are very small (e.g., 
+H
+1
+=
+16
+,
+H
+2
+=
+8
+H 
+1
+​
+ =16,H 
+2
+​
+ =8):
+
+The model may not have enough capacity to represent the complex mapping from images to labels.
+Even after many epochs, training loss may stay relatively high.
+Both training and validation accuracy may be low.
+This is underfitting due to insufficient model capacity.
+
+3.3.2 Too Large Model (Over-parameterized)
+If 
+H
+1
+,
+H
+2
+H 
+1
+​
+ ,H 
+2
+​
+  are very large (e.g., 
+H
+1
+=
+1024
+,
+H
+2
+=
+512
+H 
+1
+​
+ =1024,H 
+2
+​
+ =512):
+
+The model has huge capacity and can potentially memorize the training set.
+Training loss may become very small, almost zero.
+Validation loss may start to increase, and validation accuracy may stagnate or decrease.
+This is overfitting due to excessive capacity, especially if:
+
+There is not enough training data.
+Regularization (like dropout or weight decay) is weak or absent.
+3.3.3 Balanced Model Capacity
+Jack wants a model that is:
+
+Large enough to learn the patterns in the data.
+Not so large that it quickly memorizes everything and overfits.
+Practical intuition:
+
+For simple datasets like MNIST, MLPs with hidden sizes like
+H
+1
+=
+128
+,
+H
+2
+=
+64
+H 
+1
+​
+ =128,H 
+2
+​
+ =64 are often quite sufficient.
+For more complex data (e.g., CIFAR-10 images), pure MLPs struggle anyway, and CNNs are usually more appropriate.
+3.4 Practical Beginner Strategy for Tuning Hyperparameters
+Jack feels overwhelmed by all these knobs.
+Here is a simple, practical strategy to start with:
+
+3.4.1 Step 1: Fix a Reasonable Architecture
+Choose 1–2 hidden layers:
+Example: 
+H
+1
+=
+128
+,
+H
+2
+=
+64
+H 
+1
+​
+ =128,H 
+2
+​
+ =64.
+Do not change architecture too often at the beginning.
+Focus first on learning rate and epochs.
+3.4.2 Step 2: Choose an Initial Learning Rate and Batch Size
+Batch size: start with 
+B
+=
+64
+B=64 (if memory allows).
+Learning rate:
+If using Adam: try 
+η
+=
+10
+−
+3
+η=10 
+−3
+ .
+If using plain SGD: try 
+η
+∈
+[
+10
+−
+2
+,
+10
+−
+1
+]
+η∈[10 
+−2
+ ,10 
+−1
+ ], and decrease if unstable.
+Run a few epochs and plot:
+
+Training loss vs epoch
+Validation loss vs epoch
+3.4.3 Step 3: Adjust Learning Rate
+Based on curves:
+
+If training loss jumps wildly or becomes NaN → decrease 
+η
+η.
+If training loss is smooth but decreases very slowly and remains high → increase 
+η
+η a bit.
+Jack can try values like:
+
+η
+∈
+{
+10
+−
+4
+,
+3
+×
+10
+−
+4
+,
+10
+−
+3
+,
+3
+×
+10
+−
+3
+,
+10
+−
+2
+}
+.
+η∈{10 
+−4
+ ,3×10 
+−4
+ ,10 
+−3
+ ,3×10 
+−3
+ ,10 
+−2
+ }.
+He looks for:
+
+Training loss that decreases steadily.
+Validation loss that also goes down at least for some epochs.
+3.4.4 Step 4: Watch for Overfitting vs Underfitting
+If both training and validation losses remain high → likely underfitting:
+Try increasing model size (larger 
+H
+1
+,
+H
+2
+H 
+1
+​
+ ,H 
+2
+​
+ ).
+Or train for more epochs.
+If training loss is very low, but validation loss is much higher and increasing:
+Likely overfitting:
+Consider dropout (Section 6).
+Use early stopping (Section 5).
+Possibly reduce hidden sizes.
+3.4.5 Step 5: Coarse-to-Fine Search
+Jack should not search too finely at first.
+He can do a coarse search:
+
+Try a few learning rates 
+η
+η.
+Try 1–2 different batch sizes.
+Try 1–2 different hidden sizes (e.g., 
+128
+128-
+64
+64 vs 
+256
+256-
+128
+128).
+Once he finds a reasonable region where models are learning well:
+
+He can do a finer search around that region, making smaller changes.
+Summary
+
+Hyperparameters are the manual knobs Jack sets: learning rate, batch size, epochs, hidden sizes, etc.
+Learning rate controls how big each gradient step is; too big is unstable, too small is slow.
+Batch size and number of epochs control how data is fed to the model and for how long it is trained.
+Hidden size and layers control the capacity of the MLP (under- vs over-parameterization).
+A simple coarse-to-fine tuning strategy helps Jack find good hyperparameters without getting lost.
+In the next section, Jack will learn how to read training and validation curves to diagnose overfitting and underfitting more systematically.
+
+4. Diagnosing Overfitting and Underfitting with Curves
+Jack has tuned some hyperparameters and trained his MLP, but he now faces a common question:
+
+“Is my model underfitting, overfitting, or behaving well?”
+
+To answer this, Jack looks at:
+
+Training loss / accuracy vs epochs
+Validation loss / accuracy vs epochs
+These curves tell a story about how the model is learning.
+
+4.1 What Is Underfitting? (Simple Symptoms)
+A model is underfitting when it is too simple or not trained enough to capture the patterns in the data.
+
+Let:
+
+L
+train
+(
+t
+)
+L 
+train
+​
+ (t) be the training loss after epoch 
+t
+t.
+L
+val
+(
+t
+)
+L 
+val
+​
+ (t) be the validation loss after epoch 
+t
+t.
+In underfitting, Jack typically sees:
+
+High training loss even after many epochs:
+L
+train
+(
+t
+)
+ remains relatively large for all 
+t
+.
+L 
+train
+​
+ (t) remains relatively large for all t.
+High validation loss as well:
+L
+val
+(
+t
+)
+ is also large and close to 
+L
+train
+(
+t
+)
+.
+L 
+val
+​
+ (t) is also large and close to L 
+train
+​
+ (t).
+Training accuracy and validation accuracy are both low.
+Intuition:
+
+The MLP has not “learned the patterns” in the training data.
+It is like a student who has not understood the concept yet, so they perform poorly on both homework (training) and test (validation).
+Typical causes:
+
+Model is too small (e.g., very small hidden layers).
+Training time is too short (too few epochs).
+Learning rate is too small, so progress is extremely slow.
+Possible fixes:
+
+Increase model capacity (larger hidden layers, more layers).
+Train for more epochs.
+Slightly increase the learning rate (if loss decreases very slowly).
+4.2 What Is Overfitting? (Simple Symptoms)
+A model is overfitting when it learns the training data too well, including noise, and fails to generalize to new data.
+
+Here is what Jack sees in the curves:
+
+Training loss becomes very small:
+L
+train
+(
+t
+)
+→
+very low values as 
+t
+ increases
+.
+L 
+train
+​
+ (t)→very low values as t increases.
+Validation loss initially decreases but then starts to increase:
+∃
+t
+⋆
+:
+L
+val
+(
+t
+)
+ decreases for 
+t
+<
+t
+⋆
+,
+but increases for 
+t
+>
+t
+⋆
+.
+∃t 
+⋆
+ :L 
+val
+​
+ (t) decreases for t<t 
+⋆
+ ,but increases for t>t 
+⋆
+ .
+Training accuracy becomes very high (close to 
+100
+%
+100%), but
+validation accuracy stops improving or even decreases.
+Intuition:
+
+The MLP starts by learning general patterns that work for both training and validation data.
+After some point, it begins to memorize specific details (including noise) of the training set.
+This memorization does not help on new, unseen data, so validation performance gets worse.
+Typical causes:
+
+Model capacity is too high for the amount of data (very large hidden layers, many parameters).
+Training for too many epochs without regularization.
+Weak or no regularization (no dropout, no weight decay, etc.).
+Possible fixes:
+
+Add or increase regularization (dropout, weight decay).
+Use early stopping (stop training when validation loss starts to increase).
+Decrease model capacity slightly.
+Collect more data, if possible.
+4.3 Reading Training vs Validation Curves (Intuitive Patterns)
+Jack visualizes:
+
+L
+train
+(
+t
+)
+L 
+train
+​
+ (t): training loss vs epoch 
+t
+t.
+L
+val
+(
+t
+)
+L 
+val
+​
+ (t): validation loss vs epoch 
+t
+t.
+4.3.1 Healthy Learning (Good Fit)
+A typical good curve shape:
+
+Both training and validation loss decrease during the initial epochs.
+After some epochs, training loss may continue to decrease slowly, while validation loss stabilizes or slightly fluctuates around a low value.
+Symbolically, for epochs 
+t
+=
+1
+,
+2
+,
+…
+,
+T
+t=1,2,…,T:
+
+L
+train
+(
+t
+)
+L 
+train
+​
+ (t) decreases and then plateaus:
+L
+train
+(
+1
+)
+>
+L
+train
+(
+2
+)
+>
+⋯
+≈
+L
+train
+(
+T
+)
+.
+L 
+train
+​
+ (1)>L 
+train
+​
+ (2)>⋯≈L 
+train
+​
+ (T).
+L
+val
+(
+t
+)
+L 
+val
+​
+ (t) decreases and then remains roughly stable:
+L
+val
+(
+1
+)
+>
+L
+val
+(
+2
+)
+>
+⋯
+≈
+L
+val
+(
+T
+)
+.
+L 
+val
+​
+ (1)>L 
+val
+​
+ (2)>⋯≈L 
+val
+​
+ (T).
+Interpretation:
+
+The model is fitting training data well and generalizing to validation data.
+There is no strong sign of overfitting or underfitting.
+4.3.2 Clear Underfitting Pattern
+In underfitting, a typical pattern is:
+
+L
+train
+(
+t
+)
+L 
+train
+​
+ (t) decreases a bit but remains quite high even after many epochs.
+L
+val
+(
+t
+)
+L 
+val
+​
+ (t) is similar to 
+L
+train
+(
+t
+)
+L 
+train
+​
+ (t) and also high.
+Formally, for large 
+t
+t:
+
+L
+train
+(
+t
+)
+≈
+L
+val
+(
+t
+)
+≫
+0.
+L 
+train
+​
+ (t)≈L 
+val
+​
+ (t)≫0.
+Accuracy curves:
+
+Training accuracy: low or moderate.
+Validation accuracy: similar low or moderate.
+This means the MLP is not complex enough or not trained enough to capture the underlying function.
+
+4.3.3 Clear Overfitting Pattern
+In overfitting, Jack typically observes:
+
+Training loss keeps decreasing to very small values:
+L
+train
+(
+t
+)
+↓
+ almost 
+0.
+L 
+train
+​
+ (t)↓ almost 0.
+Validation loss decreases only up to a certain epoch 
+t
+⋆
+t 
+⋆
+  and then starts to increase:
+L
+val
+(
+1
+)
+>
+⋯
+>
+L
+val
+(
+t
+⋆
+)
+,
+but 
+L
+val
+(
+t
+⋆
++
+1
+)
+<
+L
+val
+(
+t
+⋆
++
+2
+)
+<
+…
+L 
+val
+​
+ (1)>⋯>L 
+val
+​
+ (t 
+⋆
+ ),but L 
+val
+​
+ (t 
+⋆
+ +1)<L 
+val
+​
+ (t 
+⋆
+ +2)<…
+Also:
+
+Training accuracy approaches 
+100
+%
+100%.
+Validation accuracy reaches a peak near epoch 
+t
+⋆
+t 
+⋆
+ , then drops or stagnates.
+Interpretation:
+
+After epoch 
+t
+⋆
+t 
+⋆
+ , the model is no longer improving generalization; it is mainly memorizing training details.
+The best model is usually the one around 
+t
+⋆
+t 
+⋆
+ , not the last epoch.
+This observation directly motivates early stopping (Section 5).
+
+4.4 Connecting These Patterns Specifically to MLPs
+Jack’s MLP has hyperparameters like:
+
+Hidden sizes 
+H
+1
+,
+H
+2
+H 
+1
+​
+ ,H 
+2
+​
+ 
+Number of layers
+Learning rate 
+η
+η
+Number of epochs 
+E
+E
+Changes in these directly affect the curves.
+
+4.4.1 If the MLP Is Too Small
+Example: 
+H
+1
+=
+32
+,
+H
+2
+=
+16
+H 
+1
+​
+ =32,H 
+2
+​
+ =16 on a complex dataset.
+
+Expected pattern:
+
+Training loss remains relatively high, even after many epochs.
+Validation loss is similar and also high.
+Both accuracies are low.
+Conclusion: underfitting due to low capacity.
+
+Jack can:
+
+Increase hidden sizes (e.g., 
+H
+1
+=
+128
+,
+H
+2
+=
+64
+H 
+1
+​
+ =128,H 
+2
+​
+ =64).
+Possibly add another hidden layer (with caution).
+4.4.2 If the MLP Is Too Large and Trained Too Long
+Example: 
+H
+1
+=
+1024
+,
+H
+2
+=
+512
+H 
+1
+​
+ =1024,H 
+2
+​
+ =512 with many epochs.
+
+Expected pattern:
+
+Training loss becomes very small (almost zero).
+Validation loss decreases at first but then increases.
+Large gap between training and validation loss:
+L
+train
+(
+t
+)
+≪
+L
+val
+(
+t
+)
+for late epochs
+.
+L 
+train
+​
+ (t)≪L 
+val
+​
+ (t)for late epochs.
+Conclusion: overfitting due to high capacity and long training.
+
+Jack can:
+
+Add dropout between hidden layers (Section 6).
+Use early stopping (Section 5) to stop near the best validation epoch.
+Slightly reduce hidden sizes.
+4.4.3 If Learning Rate or Epochs Are Poorly Chosen
+Learning rate too small:
+
+Both training and validation loss decrease very slowly.
+Curves look almost flat.
+Appears like mild underfitting, but the real issue is slow optimization.
+Too few epochs:
+
+Both losses are still relatively high.
+The downward trend is visible but incomplete.
+In these cases:
+
+Jack should first try increasing epochs or adjusting learning rate
+before changing the model architecture.
+Summary
+
+Underfitting: both training and validation loss are high; the model cannot fit even the training data well.
+Overfitting: training loss is very low, but validation loss starts to rise after some point.
+Reading training vs validation curves is essential to understand how an MLP behaves.
+Model size, training duration, and learning rate all shape these curves.
+These diagnostics directly motivate the use of early stopping and dropout, which we study next.
+In the next section, Jack will learn about early stopping—a practical way to stop training at the right time using validation loss.
+
+5. Early Stopping: Stopping Training at the Right Time
+Jack now understands how to read training and validation curves.
+He has seen that if he trains his MLP for too long, the model may start to overfit.
+
+This leads to a natural idea:
+
+“Can I stop training automatically at the moment when validation performance is best?”
+
+This is exactly what early stopping does.
+
+5.1 Why Training Too Long Can Hurt
+Recall the behavior of training and validation loss:
+
+Training loss 
+L
+train
+(
+t
+)
+L 
+train
+​
+ (t) usually decreases as epoch 
+t
+t increases.
+Validation loss 
+L
+val
+(
+t
+)
+L 
+val
+​
+ (t) often:
+decreases at first,
+reaches a minimum at some epoch 
+t
+⋆
+t 
+⋆
+ ,
+then starts to increase (overfitting region).
+Symbolically:
+
+For 
+t
+<
+t
+⋆
+t<t 
+⋆
+ :
+
+L
+val
+(
+t
++
+1
+)
+<
+L
+val
+(
+t
+)
+,
+L 
+val
+​
+ (t+1)<L 
+val
+​
+ (t),
+validation loss is improving.
+
+For 
+t
+>
+t
+⋆
+t>t 
+⋆
+ :
+
+L
+val
+(
+t
++
+1
+)
+>
+L
+val
+(
+t
+)
+,
+L 
+val
+​
+ (t+1)>L 
+val
+​
+ (t),
+validation loss is getting worse.
+
+If Jack continues training far beyond 
+t
+⋆
+t 
+⋆
+ , the model becomes more and more tuned to the training set and less suitable for new data.
+
+Key idea:
+
+The best generalization is achieved near the epoch where validation loss is minimal, not necessarily at the final epoch.
+Early stopping formalizes this idea.
+
+5.2 Watching Validation Loss to Decide When to Stop
+Let Jack denote:
+
+L
+val
+(
+t
+)
+L 
+val
+​
+ (t): validation loss at epoch 
+t
+t,
+t
+=
+1
+,
+2
+,
+…
+,
+E
+t=1,2,…,E: epochs.
+Conceptually, early stopping wants to find:
+
+t
+⋆
+=
+arg
+⁡
+min
+⁡
+1
+≤
+t
+≤
+E
+L
+val
+(
+t
+)
+.
+t 
+⋆
+ =arg 
+1≤t≤E
+min
+​
+ L 
+val
+​
+ (t).
+That is the epoch at which the validation loss is lowest.
+
+Practical behavior:
+
+During each epoch 
+t
+t, Jack trains on the training set and then evaluates on the validation set, obtaining 
+L
+val
+(
+t
+)
+L 
+val
+​
+ (t).
+He keeps track of the best validation loss seen so far:
+L
+best
+=
+min
+⁡
+1
+≤
+s
+≤
+t
+L
+val
+(
+s
+)
+,
+L 
+best
+​
+ = 
+1≤s≤t
+min
+​
+ L 
+val
+​
+ (s),
+and remembers the corresponding epoch 
+t
+⋆
+t 
+⋆
+ .
+If validation loss keeps decreasing, he continues training.
+When validation loss stops improving and starts to increase, he suspects overfitting.
+The core rule:
+
+Do not use the model from the last epoch;
+use the model from the epoch with lowest validation loss.
+
+Early stopping is therefore a kind of regularization technique:
+it prevents the model from entering the heavy overfitting region.
+
+5.3 “Patience” in Early Stopping (Beginner View)
+In practice, validation loss is noisy.
+It may go slightly up and down from one epoch to the next, even if the overall trend is improving.
+
+If Jack stops the moment validation loss increases once, he may stop too early due to noise.
+
+To handle this, we introduce the idea of patience.
+
+5.3.1 What Is Patience?
+Patience is an integer parameter, say 
+P
+P, which tells Jack:
+
+“How many epochs am I willing to wait without seeing an improvement in validation loss before I stop?”
+
+Mechanism:
+
+Track the best validation loss seen so far: 
+L
+best
+L 
+best
+​
+ .
+
+If at epoch 
+t
+t, the validation loss 
+L
+val
+(
+t
+)
+L 
+val
+​
+ (t) is lower than 
+L
+best
+L 
+best
+​
+ :
+
+Update:
+L
+best
+←
+L
+val
+(
+t
+)
+L 
+best
+​
+ ←L 
+val
+​
+ (t)
+Reset a counter 
+c
+=
+0
+c=0 (no “bad” epochs yet).
+If 
+L
+val
+(
+t
+)
+L 
+val
+​
+ (t) is not better than 
+L
+best
+L 
+best
+​
+ :
+
+Increment the counter:
+c
+←
+c
++
+1.
+c←c+1.
+If 
+c
+c reaches the patience value 
+P
+P, i.e.,
+
+c
+≥
+P
+,
+c≥P,
+Jack stops training.
+
+Interpretation:
+
+Small patience (e.g., 
+P
+=
+1
+P=1): very aggressive stopping.
+Larger patience (e.g., 
+P
+=
+5
+P=5 or 
+10
+10): Jack allows a few “bad” epochs where validation loss is slightly worse, waiting to see if it improves again.
+5.3.2 Intuitive Story for Jack
+Imagine Jack is climbing down a hill in fog (the loss landscape).
+He wants to reach the lowest point but cannot see very far.
+
+He measures his altitude (validation loss) every few steps (epochs):
+
+If altitude keeps decreasing, he continues.
+If altitude increases a little, he does not immediately stop—maybe it’s a small bump.
+However, if it keeps getting worse for 
+P
+P steps in a row, he concludes:
+“I have passed the valley bottom; going further only makes things worse.”
+
+So he goes back to the best altitude he has seen (the epoch with lowest validation loss).
+
+That is exactly early stopping with patience.
+
+5.4 Conceptual Blueprint for Early Stopping (No Code)
+Here is a step-by-step logical blueprint Jack can follow during training, without writing actual code here.
+
+Let:
+
+E
+max
+⁡
+E 
+max
+​
+  = maximum number of epochs Jack is willing to run,
+P
+P = patience,
+L
+best
+L 
+best
+​
+  = best validation loss seen so far (initialized to 
++
+∞
++∞),
+c
+c = number of consecutive epochs without improvement (initialized to 
+0
+0).
+5.4.1 Initialization
+Set epoch counter 
+t
+=
+0
+t=0.
+Set 
+L
+best
+=
++
+∞
+L 
+best
+​
+ =+∞.
+Set patience counter 
+c
+=
+0
+c=0.
+Save an initial copy of the model parameters (optional).
+5.4.2 For Each Epoch (Logical Loop)
+For epoch 
+t
+=
+1
+,
+2
+,
+…
+,
+E
+max
+⁡
+t=1,2,…,E 
+max
+​
+ :
+
+Train on the training set for one epoch:
+
+Go through all mini-batches.
+Update parameters using gradient descent (as described in Section 2).
+Evaluate on validation set:
+
+Compute validation loss:
+L
+val
+(
+t
+)
+.
+L 
+val
+​
+ (t).
+Compare with best validation loss so far:
+
+Case 1: Improvement
+
+If
+
+L
+val
+(
+t
+)
+<
+L
+best
+,
+L 
+val
+​
+ (t)<L 
+best
+​
+ ,
+then:
+
+Update best loss:
+L
+best
+←
+L
+val
+(
+t
+)
+.
+L 
+best
+​
+ ←L 
+val
+​
+ (t).
+Record this epoch as the best epoch:
+t
+⋆
+←
+t
+.
+t 
+⋆
+ ←t.
+Save the current model parameters as the “best model so far”.
+Reset patience counter:
+c
+←
+0.
+c←0.
+Case 2: No Improvement
+
+If
+
+L
+val
+(
+t
+)
+≥
+L
+best
+,
+L 
+val
+​
+ (t)≥L 
+best
+​
+ ,
+then:
+
+Increase patience counter:
+c
+←
+c
++
+1.
+c←c+1.
+Check the patience condition:
+
+If 
+c
+≥
+P
+c≥P, then stop training:
+
+Break out of the epoch loop early (before reaching 
+E
+max
+⁡
+E 
+max
+​
+ ).
+Restore the model parameters saved at epoch 
+t
+⋆
+t 
+⋆
+  (the best model).
+Otherwise, continue to the next epoch.
+
+5.4.3 Final Model After Early Stopping
+After early stopping, the model’s parameters correspond to the epoch 
+t
+⋆
+t 
+⋆
+  that minimized validation loss:
+
+t
+⋆
+=
+arg
+⁡
+min
+⁡
+1
+≤
+t
+≤
+T
+stop
+L
+val
+(
+t
+)
+,
+t 
+⋆
+ =arg 
+1≤t≤T 
+stop
+​
+ 
+min
+​
+ L 
+val
+​
+ (t),
+where 
+T
+stop
+≤
+E
+max
+⁡
+T 
+stop
+​
+ ≤E 
+max
+​
+  is the epoch at which Jack stopped.
+
+This gives Jack:
+
+A model that typically generalizes better than the one at the last epoch.
+A way to avoid manually guessing how many epochs to train.
+A form of regularization that complements dropout and other techniques.
+Summary
+
+Training too long can cause overfitting, even if training loss keeps decreasing.
+Early stopping uses validation loss to decide when to stop training.
+The patience parameter lets Jack tolerate small temporary increases in validation loss without stopping too early.
+The final model is chosen from the epoch with lowest validation loss, not necessarily the last epoch.
+In the next section, Jack will study dropout: another powerful regularization technique where neurons are randomly “dropped” during training to reduce overfitting in MLPs.
+
+6. Dropout in MLPs: Randomly Dropping Neurons to Avoid Overfitting
+Jack has seen that a large MLP can easily overfit if it trains for too long or has too many parameters.
+Now he wants another tool, besides early stopping, to reduce overfitting.
+
+One of the simplest and most powerful techniques is dropout.
+
+6.1 Intuition: Why Randomly Dropping Neurons Can Help
+Imagine Jack’s MLP has many neurons in each hidden layer.
+If all neurons are always active together, some of them might become too dependent on each other:
+
+A group of neurons might form a “co-adapted team”: they only work well when all of them are present.
+This team can memorize very specific patterns in the training data (noise, outliers).
+Dropout breaks these co-adaptations.
+
+6.1.1 What Dropout Does (High Level)
+During training, for each mini-batch:
+
+Each neuron in a hidden layer is randomly “dropped” (set to zero) with probability 
+p
+p.
+With probability 
+1
+−
+p
+1−p, it is kept as usual.
+So, in a given training step, Jack is effectively training a smaller sub-network sampled from the full network.
+
+If 
+h
+j
+h 
+j
+​
+  is the activation of neuron 
+j
+j in some hidden layer, then dropout does:
+
+Draw a Bernoulli random variable:
+r
+j
+∼
+Bernoulli
+(
+1
+−
+p
+)
+,
+r 
+j
+​
+ ∼Bernoulli(1−p),
+where [ r_j = \begin{cases} 1, & \text{with probability } (1 - p) \ 0, & \text{with probability } p \end{cases} ]
+Define the dropped activation:
+h
+~
+j
+=
+r
+j
+ 
+h
+j
+.
+h
+~
+  
+j
+​
+ =r 
+j
+​
+ h 
+j
+​
+ .
+If 
+r
+j
+=
+0
+r 
+j
+​
+ =0, the neuron is dropped (its output becomes zero).
+If 
+r
+j
+=
+1
+r 
+j
+​
+ =1, the neuron is kept.
+
+For a vector of activations 
+h
+=
+(
+h
+1
+,
+…
+,
+h
+H
+)
+⊤
+h=(h 
+1
+​
+ ,…,h 
+H
+​
+ ) 
+⊤
+ :
+
+Sample a mask 
+r
+=
+(
+r
+1
+,
+…
+,
+r
+H
+)
+⊤
+r=(r 
+1
+​
+ ,…,r 
+H
+​
+ ) 
+⊤
+ .
+Apply element-wise multiplication:
+h
+~
+=
+r
+⊙
+h
+.
+h
+~
+ =r⊙h.
+This is the vector that is passed to the next layer during training.
+
+6.1.2 Ensemble Intuition
+Conceptual view:
+
+Each training step sees a different sub-network (because the dropout mask changes).
+Over many steps, Jack is training an implicit ensemble of many slightly different networks that share weights.
+At test time, he uses the full network (no dropout), which behaves like an average of this ensemble.
+This averaging effect is what helps reduce overfitting and improves generalization.
+
+6.2 Train Mode vs Eval Mode: What Changes Inside Dropout
+Dropout behaves differently during training and testing.
+
+Let 
+p
+p be the dropout probability (e.g., 
+p
+=
+0.5
+p=0.5).
+
+6.2.1 During Training
+During training:
+
+Each neuron is dropped with probability 
+p
+p.
+We use the dropped activations 
+h
+~
+h
+~
+  to compute the next layer.
+Conceptually, for a hidden layer:
+
+Compute pre-activation:
+z
+=
+W
+x
++
+b
+.
+z=Wx+b.
+Apply non-linear activation:
+h
+=
+σ
+(
+z
+)
+.
+h=σ(z).
+Sample dropout mask 
+r
+r:
+r
+j
+∼
+Bernoulli
+(
+1
+−
+p
+)
+.
+r 
+j
+​
+ ∼Bernoulli(1−p).
+Apply dropout:
+h
+~
+=
+r
+⊙
+h
+.
+h
+~
+ =r⊙h.
+h
+~
+h
+~
+  is then used as input to the next layer.
+
+6.2.2 During Testing / Evaluation
+During testing (or evaluation):
+
+We do not drop neurons.
+We want the full network to be active.
+However, we must be careful about the scale of activations.
+One common approach (used conceptually in many frameworks) is:
+
+During training, keep neurons with probability 
+1
+−
+p
+1−p, and scale activations so the expected value matches test time.
+During evaluation, use the full activation 
+h
+h without dropout and without extra scaling.
+The key idea for Jack:
+
+Training mode: apply random dropout (neurons “on/off”).
+Eval mode: turn dropout off, use the full network.
+
+In PyTorch, switching between these modes is handled by calling:
+
+model.train() → enables dropout behavior
+model.eval() → disables dropout (and also changes batch norm behavior, if present)
+6.3 Where to Put Dropout in an MLP?
+Dropout is usually applied to hidden layers, not to the input or output logits (for basic setups).
+
+Consider Jack’s 2-hidden-layer MLP:
+
+Input 
+→
+→ Hidden 1
+Hidden 1 
+→
+→ Hidden 2
+Hidden 2 
+→
+→ Output
+A common pattern:
+
+Linear + activation for first hidden layer:
+
+h
+(
+1
+)
+=
+σ
+(
+W
+(
+1
+)
+x
++
+b
+(
+1
+)
+)
+.
+h 
+(1)
+ =σ(W 
+(1)
+ x+b 
+(1)
+ ).
+Apply dropout on 
+h
+(
+1
+)
+h 
+(1)
+ :
+
+h
+~
+(
+1
+)
+=
+r
+(
+1
+)
+⊙
+h
+(
+1
+)
+.
+h
+~
+  
+(1)
+ =r 
+(1)
+ ⊙h 
+(1)
+ .
+Use 
+h
+~
+(
+1
+)
+h
+~
+  
+(1)
+  as input to second hidden layer:
+
+h
+(
+2
+)
+=
+σ
+(
+W
+(
+2
+)
+h
+~
+(
+1
+)
++
+b
+(
+2
+)
+)
+.
+h 
+(2)
+ =σ(W 
+(2)
+  
+h
+~
+  
+(1)
+ +b 
+(2)
+ ).
+Optionally, apply dropout again on 
+h
+(
+2
+)
+h 
+(2)
+ :
+
+h
+~
+(
+2
+)
+=
+r
+(
+2
+)
+⊙
+h
+(
+2
+)
+.
+h
+~
+  
+(2)
+ =r 
+(2)
+ ⊙h 
+(2)
+ .
+Finally, compute logits from 
+h
+~
+(
+2
+)
+h
+~
+  
+(2)
+ :
+
+z
+(
+3
+)
+=
+W
+(
+3
+)
+h
+~
+(
+2
+)
++
+b
+(
+3
+)
+.
+z 
+(3)
+ =W 
+(3)
+  
+h
+~
+  
+(2)
+ +b 
+(3)
+ .
+Usual practice:
+
+Between hidden layers: Yes, apply dropout.
+On the last output layer (logits): Usually no dropout directly on logits for standard classification.
+On input layer: Sometimes used in some architectures, but for basic MLPs, Jack can skip input dropout at first.
+6.4 Choosing and Tuning the Dropout Rate 
+p
+p
+The hyperparameter 
+p
+p controls how much dropout Jack applies:
+
+p
+=
+0
+p=0: no dropout at all.
+Small 
+p
+p (e.g., 
+0.1
+0.1 or 
+0.2
+0.2): mild regularization.
+Moderate 
+p
+p (e.g., 
+0.3
+0.3 or 
+0.5
+0.5): stronger regularization.
+Very high 
+p
+p (e.g., 
+0.7
+0.7 or 
+0.8
+0.8): might remove too much information and hurt learning.
+6.4.1 Intuitive Effects of Different 
+p
+p
+Too small 
+p
+p (e.g., 
+p
+≈
+0.05
+p≈0.05):
+
+Almost all neurons remain active.
+Overfitting might still happen if the network is large and data is limited.
+Reasonable 
+p
+p (e.g., 
+0.3
+0.3–
+0.5
+0.5):
+
+Each training step uses a slightly different sub-network.
+Co-adaptation is reduced, and generalization often improves.
+This is a common choice for fully connected layers in MLPs.
+Too large 
+p
+p (e.g., 
+≥
+0.7
+≥0.7):
+
+Too many neurons are dropped.
+The remaining network is too small at each step.
+Training may become unstable or very slow, and the model may underfit.
+6.4.2 Practical Beginner Strategy
+Jack can follow this simple strategy:
+
+Start without dropout.
+Train the MLP and inspect training/validation curves.
+If there is clear overfitting:
+Add dropout with 
+p
+=
+0.3
+p=0.3 between hidden layers.
+If overfitting persists:
+Increase dropout rate to 
+p
+=
+0.4
+p=0.4 or 
+0.5
+0.5.
+Or add dropout to additional hidden layers (if not already).
+He should always re-check the curves:
+
+If training loss becomes much higher and both training and validation accuracies are low, dropout may be too strong.
+If training loss is low but validation loss is still much higher, consider combining dropout with early stopping and possibly reducing model size.
+Summary
+
+Dropout randomly sets hidden neuron outputs to zero during training, breaking strong co-adaptations and reducing overfitting.
+Mathematically, dropout multiplies activations by a random mask 
+r
+r of Bernoulli variables.
+During training, neurons are dropped with probability 
+p
+p; during evaluation, dropout is turned off and the full network is used.
+Dropout is typically applied between hidden layers in an MLP, not on the final logits.
+The dropout rate 
+p
+p is another hyperparameter; typical values are between 
+0.2
+0.2 and 
+0.5
+0.5 for hidden layers in basic MLPs.
